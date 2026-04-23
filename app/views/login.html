@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login — RentTrace</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.2/css/bulma.min.css"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <script src="{{ url_for('static', filename='js/htmx.min.js') }}" defer></script>
+  <style>
+    html, body { height: 100%; font-family: 'DM Sans', sans-serif; }
+
+    .login-page {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* ── Left panel ── */
+    .login-left {
+      width: 420px;
+      flex-shrink: 0;
+      background: #141414;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 2.5rem 2.5rem 2rem;
+    }
+    .login-brand {
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: #fff;
+    }
+    .login-brand span { color: #22c55e; }
+
+    .login-tagline {
+      color: rgba(255,255,255,0.4);
+      font-size: 0.8rem;
+      margin-top: 0.25rem;
+    }
+
+    .login-left-body { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+
+    .login-headline {
+      font-size: 1.9rem;
+      font-weight: 600;
+      color: #fff;
+      line-height: 1.2;
+      margin-bottom: 0.75rem;
+    }
+    .login-sub {
+      color: rgba(255,255,255,0.45);
+      font-size: 0.875rem;
+      line-height: 1.6;
+    }
+
+    .login-features { margin-top: 2rem; display: flex; flex-direction: column; gap: 0.75rem; }
+    .login-feature  { display: flex; align-items: center; gap: 0.65rem; }
+    .login-feature-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #22c55e; flex-shrink: 0;
+    }
+    .login-feature span { color: rgba(255,255,255,0.5); font-size: 0.82rem; }
+
+    .login-left-footer {
+      font-size: 0.72rem;
+      color: rgba(255,255,255,0.2);
+    }
+
+    /* ── Right panel ── */
+    .login-right {
+      flex: 1;
+      background: #f4f5f7;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .login-card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 2.5rem 2rem;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    }
+
+    .login-card-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 0.25rem;
+    }
+    .login-card-sub {
+      font-size: 0.82rem;
+      color: #6b7280;
+      margin-bottom: 1.75rem;
+    }
+
+    .field label { font-size: 0.8rem; font-weight: 500; color: #374151; margin-bottom: 0.4rem; }
+    .input {
+      border-radius: 8px !important;
+      border-color: #e5e7eb !important;
+      font-size: 0.875rem !important;
+      height: 42px !important;
+      font-family: 'DM Sans', sans-serif !important;
+    }
+    .input:focus {
+      border-color: #22c55e !important;
+      box-shadow: 0 0 0 3px rgba(34,197,94,0.15) !important;
+    }
+
+    .btn-login {
+      width: 100%;
+      height: 42px;
+      background: #22c55e;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 0.9rem;
+      font-weight: 500;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      transition: background 0.15s;
+      margin-top: 0.25rem;
+    }
+    .btn-login:hover { background: #16a34a; }
+    .btn-login:disabled { background: #86efac; cursor: not-allowed; }
+
+    #login-error {
+      display: none;
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.2);
+      border-radius: 8px;
+      padding: 0.6rem 0.9rem;
+      font-size: 0.82rem;
+      color: #b91c1c;
+      margin-bottom: 1rem;
+    }
+    #login-error.is-visible { display: block; }
+  </style>
+</head>
+<body>
+<div class="login-page">
+
+  <!-- Left -->
+  <div class="login-left">
+    <div>
+      <div class="login-brand">Rent<span>Trace</span></div>
+      <div class="login-tagline">Rental Income Audit System</div>
+    </div>
+
+    <div class="login-left-body">
+      <div class="login-headline">Forensic<br>income<br>reconciliation.</div>
+      <div class="login-sub">Verify every transaction. Flag every discrepancy. Generate audit-ready reports.</div>
+      <div class="login-features">
+        <div class="login-feature">
+          <div class="login-feature-dot"></div>
+          <span>Bank statement matching</span>
+        </div>
+        <div class="login-feature">
+          <div class="login-feature-dot"></div>
+          <span>Receipt verification</span>
+        </div>
+        <div class="login-feature">
+          <div class="login-feature-dot"></div>
+          <span>Automated discrepancy flagging</span>
+        </div>
+        <div class="login-feature">
+          <div class="login-feature-dot"></div>
+          <span>Audit report export</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="login-left-footer">&copy; {{ 2025 }} RentTrace. All rights reserved.</div>
+  </div>
+
+  <!-- Right -->
+  <div class="login-right">
+    <div class="login-card">
+      <div class="login-card-title">Welcome back</div>
+      <div class="login-card-sub">Sign in to your auditor account</div>
+
+      <div id="login-error"></div>
+
+      <div class="field">
+        <label>Email address</label>
+        <div class="control">
+          <input id="email" class="input" type="email" placeholder="admin@rentrace.co.zw" autocomplete="email"/>
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:1rem;">
+        <label>Password</label>
+        <div class="control">
+          <input id="password" class="input" type="password" placeholder="••••••••" autocomplete="current-password"/>
+        </div>
+      </div>
+
+      <div style="margin-top:1.5rem;">
+        <button class="btn-login" id="login-btn" onclick="doLogin()">Sign in</button>
+      </div>
+
+      <div style="margin-top:1.25rem;text-align:center;font-size:0.75rem;color:#9ca3af;">
+        RentTrace v1.0 &mdash; Auditor access only
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  async function doLogin() {
+    const btn   = document.getElementById('login-btn');
+    const error = document.getElementById('login-error');
+    const email    = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+
+    error.classList.remove('is-visible');
+
+    if (!email || !password) {
+      error.textContent = 'Please enter your email and password.';
+      error.classList.add('is-visible');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Signing in…';
+
+    try {
+      const res  = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        window.location.href = data.redirect;
+      } else {
+        error.textContent = data.error || 'Invalid credentials.';
+        error.classList.add('is-visible');
+        btn.disabled = false;
+        btn.textContent = 'Sign in';
+      }
+    } catch (e) {
+      error.textContent = 'Something went wrong. Please try again.';
+      error.classList.add('is-visible');
+      btn.disabled = false;
+      btn.textContent = 'Sign in';
+    }
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') doLogin();
+  });
+</script>
+</body>
+</html>

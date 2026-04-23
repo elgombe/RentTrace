@@ -1,0 +1,39 @@
+{% if tenants %}
+<table class="table rt-table is-fullwidth">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Unit</th>
+      <th>Monthly rent</th>
+      <th>Lease start</th>
+      <th>Lease end</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for t in tenants %}
+    <tr>
+      <td style="font-weight:500;">{{ t.name }}</td>
+      <td>{{ t.unit_number }}</td>
+      <td>${{ "%.2f"|format(t.monthly_rent) }}</td>
+      <td>{{ t.lease_start or '—' }}</td>
+      <td>{{ t.lease_end or '—' }}</td>
+      <td style="text-align:right;">
+        <button class="button is-small is-light"
+                onclick="openEditModal({{ t.id }},'{{ t.name }}','{{ t.unit_number }}',{{ t.monthly_rent }},'{{ t.lease_start or '' }}','{{ t.lease_end or '' }}')">
+          Edit
+        </button>
+        <button class="button is-small is-danger is-light" style="margin-left:0.4rem;"
+                onclick="deleteTenant({{ t.id }})">
+          Delete
+        </button>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div style="text-align:center;padding:2.5rem;color:#9ca3af;font-size:0.875rem;">
+  No tenants added yet. Click <strong>Add tenant</strong> to get started.
+</div>
+{% endif %}

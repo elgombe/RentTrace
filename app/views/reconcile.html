@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}Reconcile — RentTrace{% endblock %}
+{% block page_title %}Reconcile{% endblock %}
+
+{% block content %}
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;">
+  <div style="font-size:0.875rem;color:#6b7280;">
+    Match expected income against bank deposits and receipts
+  </div>
+  <div style="display:flex;gap:0.75rem;">
+    <button class="button is-accent" onclick="runReconciliation()">
+      Run reconciliation
+    </button>
+    <a href="/api/reports/export" class="button">
+      Export report
+    </a>
+  </div>
+</div>
+
+<!-- ── Filter bar ── -->
+<div class="rt-card" style="margin-bottom:1.25rem;padding:1rem 1.5rem;">
+  <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+    <div>
+      <label style="font-size:0.75rem;font-weight:500;color:#6b7280;display:block;margin-bottom:0.3rem;">Period</label>
+      <input class="input" type="month" id="filter-period" style="width:180px;font-size:0.875rem;height:36px;"/>
+    </div>
+    <div>
+      <label style="font-size:0.75rem;font-weight:500;color:#6b7280;display:block;margin-bottom:0.3rem;">Status</label>
+      <div class="select" style="height:36px;">
+        <select id="filter-status" style="font-size:0.875rem;height:36px;">
+          <option value="">All statuses</option>
+          <option value="matched">Matched</option>
+          <option value="missing_deposit">Missing deposit</option>
+          <option value="unverified">Unverified income</option>
+          <option value="arrears">Arrears</option>
+        </select>
+      </div>
+    </div>
+    <div style="align-self:flex-end;">
+      <button class="button" style="height:36px;font-size:0.875rem;" onclick="applyFilters()">
+        Apply
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Run status ── -->
+<div id="reconcile-status" style="display:none;margin-bottom:1rem;"></div>
+
+<!-- ── Results table ── -->
+<div class="rt-card">
+  <div style="margin-bottom:1rem;">
+    <div style="font-size:1rem;font-weight:600;color:#111827;">Reconciliation results</div>
+    <div style="font-size:0.78rem;color:#6b7280;" id="results-count">Loading…</div>
+  </div>
+
+  <div id="reconcile-results"
+       hx-get="/api/reconcile/results"
+       hx-trigger="load"
+       hx-swap="innerHTML">
+    <div style="text-align:center;padding:2rem;color:#9ca3af;font-size:0.875rem;">Loading…</div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  async function runReconciliation() {
+    const status = document.getElementById('reconcile-status');
+    const period = document.getElementById('filter-period').value;
+
+    status.style.display = 'block';
+    status.innerHTML = `
+      <div class="notification is-info is-light" style="padding:0.75rem 1rem;font-size:0.875rem;">
+        Running reconciliation…
+      </div>`;
+
+    try {
+      const res  = await fetch('/api/reconcile/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ period: period || null }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        status.innerHTML = `
+          <div class="notification is-success is-light" style="padding:0.75rem 1rem;font-size:0.875rem;">
+            ✓ Reconciliation complete — ${data.total} records processed.
+            <button class="delete" onclick="this.parentElement.parentElement.style.display='none'"></button>
+          </div>`;
+        htmx.trigger('#reconcile-results', 'load');
+      } else {
+        status.innerHTML = `
+          <div class="notification is-danger is-light" style="padding:0.75rem 1rem;font-size:0.875rem;">
+            ${data.error || 'Reconciliation failed.'}
+            <button class="delete" onclick="this.parentElement.parentElement.style.display='none'"></button>
+          </div>`;
+      }
+    } catch (e) {
+      status.innerHTML = `
+        <div class="notification is-danger is-light" style="padding:0.75rem 1rem;font-size:0.875rem;">
+          Something went wrong. Please try again.
+        </div>`;
+    }
+  }
+
+  function applyFilters() {
+    const period = document.getElementById('filter-period').value;
+    const status = document.getElementById('filter-status').value;
+    const params = new URLSearchParams();
+    if (period) params.set('period', period);
+    if (status) params.set('status', status);
+    const target = document.getElementById('reconcile-results');
+    target.setAttribute('hx-get', `/api/reconcile/results?${params.toString()}`);
+    htmx.trigger(target, 'load');
+  }
+</script>
+{% endblock %}

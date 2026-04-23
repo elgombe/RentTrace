@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}Tenants — RentTrace{% endblock %}
+{% block page_title %}Tenants{% endblock %}
+
+{% block content %}
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;">
+  <div>
+    <div style="font-size:0.875rem;color:#6b7280;">Manage all tenant and lease records</div>
+  </div>
+  <button class="button is-accent" onclick="openAddModal()">+ Add tenant</button>
+</div>
+
+<!-- ── Tenant table ── -->
+<div class="rt-card">
+  <div id="tenants-table"
+       hx-get="/api/tenants"
+       hx-trigger="load"
+       hx-swap="innerHTML">
+    <div style="text-align:center;padding:2rem;color:#9ca3af;font-size:0.875rem;">Loading…</div>
+  </div>
+</div>
+
+<!-- ── Add / Edit Modal ── -->
+<div class="modal" id="tenant-modal">
+  <div class="modal-background" onclick="closeModal()"></div>
+  <div class="modal-card" style="border-radius:14px;max-width:480px;width:90%;">
+    <header class="modal-card-head" style="border-radius:14px 14px 0 0;border-bottom:1px solid #e5e7eb;">
+      <p class="modal-card-title" style="font-size:1rem;font-weight:600;" id="modal-title">Add tenant</p>
+      <button class="delete" onclick="closeModal()"></button>
+    </header>
+    <section class="modal-card-body">
+      <input type="hidden" id="tenant-id"/>
+
+      <div class="field">
+        <label class="label" style="font-size:0.8rem;">Full name</label>
+        <div class="control">
+          <input class="input" type="text" id="tenant-name" placeholder="John Doe"/>
+        </div>
+      </div>
+
+      <div class="columns">
+        <div class="column">
+          <div class="field">
+            <label class="label" style="font-size:0.8rem;">Unit number</label>
+            <div class="control">
+              <input class="input" type="text" id="tenant-unit" placeholder="A1"/>
+            </div>
+          </div>
+        </div>
+        <div class="column">
+          <div class="field">
+            <label class="label" style="font-size:0.8rem;">Monthly rent ($)</label>
+            <div class="control">
+              <input class="input" type="number" id="tenant-rent" placeholder="500.00" step="0.01"/>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="columns">
+        <div class="column">
+          <div class="field">
+            <label class="label" style="font-size:0.8rem;">Lease start</label>
+            <div class="control">
+              <input class="input" type="date" id="tenant-lease-start"/>
+            </div>
+          </div>
+        </div>
+        <div class="column">
+          <div class="field">
+            <label class="label" style="font-size:0.8rem;">Lease end</label>
+            <div class="control">
+              <input class="input" type="date" id="tenant-lease-end"/>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="modal-error" style="display:none;color:#b91c1c;font-size:0.8rem;margin-top:0.5rem;"></div>
+    </section>
+    <footer class="modal-card-foot" style="border-top:1px solid #e5e7eb;border-radius:0 0 14px 14px;gap:0.5rem;">
+      <button class="button is-accent" id="modal-save-btn" onclick="saveTenant()">Save</button>
+      <button class="button" onclick="closeModal()">Cancel</button>
+    </footer>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function openAddModal() {
+    document.getElementById('modal-title').textContent = 'Add tenant';
+    document.getElementById('tenant-id').value = '';
+    document.getElementById('tenant-name').value = '';
+    document.getElementById('tenant-unit').value = '';
+    document.getElementById('tenant-rent').value = '';
+    document.getElementById('tenant-lease-start').value = '';
+    document.getElementById('tenant-lease-end').value = '';
+    document.getElementById('modal-error').style.display = 'none';
+    document.getElementById('tenant-modal').classList.add('is-active');
+  }
+
+  function openEditModal(id, name, unit, rent, leaseStart, leaseEnd) {
+    document.getElementById('modal-title').textContent = 'Edit tenant';
+    document.getElementById('tenant-id').value = id;
+    document.getElementById('tenant-name').value = name;
+    document.getElementById('tenant-unit').value = unit;
+    document.getElementById('tenant-rent').value = rent;
+    document.getElementById('tenant-lease-start').value = leaseStart || '';
+    document.getElementById('tenant-lease-end').value = leaseEnd || '';
+    document.getElementById('modal-error').style.display = 'none';
+    document.getElementById('tenant-modal').classList.add('is-active');
+  }
+
+  function closeModal() {
+    document.getElementById('tenant-modal').classList.remove('is-active');
+  }
+
+  async function saveTenant() {
+    const id    = document.getElementById('tenant-id').value;
+    const btn   = document.getElementById('modal-save-btn');
+    const error = document.getElementById('modal-error');
+
+    const payload = {
+      name:        document.getElementById('tenant-name').value.trim(),
+      unit_number: document.getElementById('tenant-unit').value.trim(),
+      monthly_rent: parseFloat(document.getElementById('tenant-rent').value),
+      lease_start:  document.getElementById('tenant-lease-start').value || null,
+      lease_end:    document.getElementById('tenant-lease-end').value || null,
+    };
+
+    if (!payload.name || !payload.unit_number || isNaN(payload.monthly_rent)) {
+      error.textContent = 'Name, unit and rent are required.';
+      error.style.display = 'block';
+      return;
+    }
+
+    btn.classList.add('is-loading');
+    const url    = id ? `/api/tenants/${id}` : '/api/tenants';
+    const method = id ? 'PUT' : 'POST';
+
+    try {
+      const res  = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        closeModal();
+        htmx.trigger('#tenants-table', 'load');
+      } else {
+        error.textContent = data.error || 'Failed to save tenant.';
+        error.style.display = 'block';
+      }
+    } catch (e) {
+      error.textContent = 'Something went wrong.';
+      error.style.display = 'block';
+    } finally {
+      btn.classList.remove('is-loading');
+    }
+  }
+
+  async function deleteTenant(id) {
+    if (!confirm('Delete this tenant? This cannot be undone.')) return;
+    await fetch(`/api/tenants/${id}`, { method: 'DELETE' });
+    htmx.trigger('#tenants-table', 'load');
+  }
+</script>
+{% endblock %}

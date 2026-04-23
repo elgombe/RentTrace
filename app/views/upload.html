@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}Upload — RentTrace{% endblock %}
+{% block page_title %}Upload{% endblock %}
+
+{% block content %}
+
+<div style="font-size:0.875rem;color:#6b7280;margin-bottom:1.75rem;">
+  Upload bank statements and receipts for reconciliation
+</div>
+
+<div class="columns">
+
+  <!-- ── Bank statement upload ── -->
+  <div class="column is-half">
+    <div class="rt-card">
+      <div style="margin-bottom:1.25rem;">
+        <div style="font-size:1rem;font-weight:600;color:#111827;">Bank statement</div>
+        <div style="font-size:0.78rem;color:#6b7280;margin-top:0.2rem;">CSV or Excel file from your bank</div>
+      </div>
+
+      <div id="bank-dropzone"
+           style="border:2px dashed #e5e7eb;border-radius:10px;padding:2rem;text-align:center;
+                  cursor:pointer;transition:border-color 0.15s;"
+           onclick="document.getElementById('bank-file').click()"
+           ondragover="handleDragOver(event,'bank-dropzone')"
+           ondragleave="handleDragLeave('bank-dropzone')"
+           ondrop="handleDrop(event,'bank-file','bank-dropzone')">
+        <svg width="32" height="32" fill="none" stroke="#9ca3af" viewBox="0 0 24 24" style="margin:0 auto 0.75rem;">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 12V4m0 0L8 8m4-4l4 4"/>
+        </svg>
+        <div style="font-size:0.875rem;color:#374151;font-weight:500;">Drop file here or click to browse</div>
+        <div style="font-size:0.75rem;color:#9ca3af;margin-top:0.3rem;">.csv, .xlsx, .xls — max 16MB</div>
+        <input type="file" id="bank-file" accept=".csv,.xlsx,.xls" style="display:none;"
+               onchange="previewFile(this,'bank-preview')"/>
+      </div>
+
+      <div id="bank-preview" style="display:none;margin-top:0.75rem;"></div>
+
+      <button class="button is-accent is-fullwidth" style="margin-top:1rem;"
+              onclick="uploadFile('bank-file','/api/transactions/upload','bank-result')">
+        Upload bank statement
+      </button>
+      <div id="bank-result" style="margin-top:0.75rem;font-size:0.82rem;"></div>
+    </div>
+  </div>
+
+  <!-- ── Receipts upload ── -->
+  <div class="column is-half">
+    <div class="rt-card">
+      <div style="margin-bottom:1.25rem;">
+        <div style="font-size:1rem;font-weight:600;color:#111827;">Receipts</div>
+        <div style="font-size:0.78rem;color:#6b7280;margin-top:0.2rem;">PDF, image, or Excel receipt file</div>
+      </div>
+
+      <div id="receipt-dropzone"
+           style="border:2px dashed #e5e7eb;border-radius:10px;padding:2rem;text-align:center;
+                  cursor:pointer;transition:border-color 0.15s;"
+           onclick="document.getElementById('receipt-file').click()"
+           ondragover="handleDragOver(event,'receipt-dropzone')"
+           ondragleave="handleDragLeave('receipt-dropzone')"
+           ondrop="handleDrop(event,'receipt-file','receipt-dropzone')">
+        <svg width="32" height="32" fill="none" stroke="#9ca3af" viewBox="0 0 24 24" style="margin:0 auto 0.75rem;">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/>
+        </svg>
+        <div style="font-size:0.875rem;color:#374151;font-weight:500;">Drop file here or click to browse</div>
+        <div style="font-size:0.75rem;color:#9ca3af;margin-top:0.3rem;">.pdf, .png, .jpg, .xlsx — max 16MB</div>
+        <input type="file" id="receipt-file" accept=".pdf,.png,.jpg,.jpeg,.xlsx,.xls,.csv"
+               style="display:none;" onchange="previewFile(this,'receipt-preview')"/>
+      </div>
+
+      <div id="receipt-preview" style="display:none;margin-top:0.75rem;"></div>
+
+      <button class="button is-accent is-fullwidth" style="margin-top:1rem;"
+              onclick="uploadFile('receipt-file','/api/receipts/upload','receipt-result')">
+        Upload receipts
+      </button>
+      <div id="receipt-result" style="margin-top:0.75rem;font-size:0.82rem;"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Upload history ── -->
+<div class="rt-card" style="margin-top:1.25rem;">
+  <div style="margin-bottom:1rem;">
+    <div style="font-size:1rem;font-weight:600;color:#111827;">Recent uploads</div>
+    <div style="font-size:0.78rem;color:#6b7280;">Bank statements and receipts uploaded this session</div>
+  </div>
+  <div id="upload-history"
+       hx-get="/api/transactions/recent"
+       hx-trigger="load"
+       hx-swap="innerHTML">
+    <div style="text-align:center;padding:1.5rem;color:#9ca3af;font-size:0.875rem;">Loading…</div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function handleDragOver(e, zoneId) {
+    e.preventDefault();
+    document.getElementById(zoneId).style.borderColor = '#22c55e';
+  }
+  function handleDragLeave(zoneId) {
+    document.getElementById(zoneId).style.borderColor = '#e5e7eb';
+  }
+  function handleDrop(e, inputId, zoneId) {
+    e.preventDefault();
+    handleDragLeave(zoneId);
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      const input = document.getElementById(inputId);
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      input.files = dt.files;
+      previewFile(input, inputId.replace('-file', '-preview'));
+    }
+  }
+
+  function previewFile(input, previewId) {
+    const preview = document.getElementById(previewId);
+    if (!input.files.length) { preview.style.display = 'none'; return; }
+    const file = input.files[0];
+    const size = (file.size / 1024).toFixed(1) + ' KB';
+    preview.innerHTML = `
+      <div style="display:flex;align-items:center;gap:0.6rem;background:#f9fafb;
+                  border:1px solid #e5e7eb;border-radius:8px;padding:0.6rem 0.9rem;">
+        <svg width="16" height="16" fill="none" stroke="#6b7280" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/>
+        </svg>
+        <span style="font-size:0.82rem;color:#374151;flex:1;">${file.name}</span>
+        <span style="font-size:0.75rem;color:#9ca3af;">${size}</span>
+      </div>`;
+    preview.style.display = 'block';
+  }
+
+  async function uploadFile(inputId, url, resultId) {
+    const input  = document.getElementById(inputId);
+    const result = document.getElementById(resultId);
+
+    if (!input.files.length) {
+      result.innerHTML = '<span style="color:#b91c1c;">Please select a file first.</span>';
+      return;
+    }
+
+    const form = new FormData();
+    form.append('file', input.files[0]);
+    result.innerHTML = '<span style="color:#6b7280;">Uploading…</span>';
+
+    try {
+      const res  = await fetch(url, { method: 'POST', body: form });
+      const data = await res.json();
+
+      if (data.success) {
+        result.innerHTML = `<span style="color:#15803d;">✓ ${data.message || 'Uploaded successfully.'}</span>`;
+        htmx.trigger('#upload-history', 'load');
+      } else {
+        result.innerHTML = `<span style="color:#b91c1c;">${data.error || 'Upload failed.'}</span>`;
+      }
+    } catch (e) {
+      result.innerHTML = '<span style="color:#b91c1c;">Something went wrong.</span>';
+    }
+  }
+</script>
+{% endblock %}
