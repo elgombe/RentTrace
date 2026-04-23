@@ -14,28 +14,28 @@ def index():
 def login():
     if "user_id" in session:
         return redirect(url_for("views.dashboard"))
-    return render_template("login.html")
+    return 'Login Page - not implemented yet'
 
 
 @views_bp.route("/dashboard")
 @login_required
 def dashboard():
-    return render_template("dashboard.html")
+    return 'Dashboard Page - not implemented yet'
 
 
 @views_bp.route("/tenants")
 @login_required
 def tenants():
-    return render_template("tenants.html")
+    return 'Tenants Page - not implemented yet'
 
 
 @views_bp.route("/upload")
 @login_required
 def upload():
-    return render_template("upload.html")
+    return 'Upload Page - not implemented yet'
 
 
 @views_bp.route("/reconcile")
 @login_required
 def reconcile():
-    return render_template("reconcile.html")
+    return 'Reconcile Page - not implemented yet'

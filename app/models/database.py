@@ -12,6 +12,13 @@ def init_db(app):
     db.init_app(app)
 
     with app.app_context():
+        # Import models here to guarantee they're registered before create_all
+        from app.models.user_model import User
+        from app.models.tenant_model import Tenant
+        from app.models.receipt_model import Receipt
+        from app.models.transaction_model import BankTransaction
+        from app.models.reconcile_model import Reconciliation
+
         db.create_all()
         seed_default_user()
 
