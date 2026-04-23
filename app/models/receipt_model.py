@@ -2,6 +2,7 @@ from datetime import datetime
 from app.models.database import db
 
 
+
 class Receipt(db.Model):
     __tablename__ = "receipts"
 
