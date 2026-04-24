@@ -3,6 +3,62 @@
 {% block title %}Reconcile — RentTrace{% endblock %}
 {% block page_title %}Reconcile{% endblock %}
 
+{% block head %}
+<style>
+  .period-picker {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .period-select-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .period-select-group label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .period-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .period-sep {
+    font-size: 0.875rem;
+    color: #9ca3af;
+    padding-top: 1.4rem;
+  }
+  .rt-select {
+    height: 40px;
+    padding: 0 0.75rem;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-family: 'DM Sans', sans-serif;
+    color: #111827;
+    background: #f9fafb;
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.6rem center;
+    padding-right: 2rem;
+  }
+  .rt-select:focus {
+    border-color: #22c55e;
+    background-color: #fff;
+    box-shadow: 0 0 0 3px rgba(34,197,94,0.12);
+  }
+</style>
+{% endblock %}
+
 {% block content %}
 
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;">
@@ -13,36 +69,84 @@
     <button class="button is-accent" onclick="runReconciliation()">
       Run reconciliation
     </button>
-    <a href="/api/reports/export" class="button">
+    <button class="button" onclick="exportReport()">
       Export report
-    </a>
+    </button>
   </div>
 </div>
 
-<!-- ── Filter bar ── -->
-<div class="rt-card" style="margin-bottom:1.25rem;padding:1rem 1.5rem;">
-  <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
-    <div>
-      <label style="font-size:0.75rem;font-weight:500;color:#6b7280;display:block;margin-bottom:0.3rem;">Period</label>
-      <input class="input" type="month" id="filter-period" style="width:180px;font-size:0.875rem;height:36px;"/>
-    </div>
-    <div>
-      <label style="font-size:0.75rem;font-weight:500;color:#6b7280;display:block;margin-bottom:0.3rem;">Status</label>
-      <div class="select" style="height:36px;">
-        <select id="filter-status" style="font-size:0.875rem;height:36px;">
-          <option value="">All statuses</option>
-          <option value="matched">Matched</option>
-          <option value="missing_deposit">Missing deposit</option>
-          <option value="unverified">Unverified income</option>
-          <option value="arrears">Arrears</option>
+<!-- ── Period & filter bar ── -->
+<div class="rt-card" style="margin-bottom:1.25rem;padding:1.25rem 1.5rem;">
+  <div style="font-size:0.8rem;font-weight:600;color:#374151;margin-bottom:0.85rem;text-transform:uppercase;letter-spacing:0.04em;">
+    Select period to reconcile
+  </div>
+  <div class="period-picker">
+
+    <!-- From -->
+    <div class="period-select-group">
+      <label>From</label>
+      <div class="period-row">
+        <select class="rt-select" id="from-month" style="width:130px;">
+          <option value="01">January</option>
+          <option value="02">February</option>
+          <option value="03">March</option>
+          <option value="04">April</option>
+          <option value="05">May</option>
+          <option value="06">June</option>
+          <option value="07">July</option>
+          <option value="08">August</option>
+          <option value="09">September</option>
+          <option value="10">October</option>
+          <option value="11">November</option>
+          <option value="12">December</option>
         </select>
+        <select class="rt-select" id="from-year" style="width:90px;"></select>
       </div>
     </div>
-    <div style="align-self:flex-end;">
-      <button class="button" style="height:36px;font-size:0.875rem;" onclick="applyFilters()">
-        Apply
+
+    <div class="period-sep">to</div>
+
+    <!-- To -->
+    <div class="period-select-group">
+      <label>To</label>
+      <div class="period-row">
+        <select class="rt-select" id="to-month" style="width:130px;">
+          <option value="01">January</option>
+          <option value="02">February</option>
+          <option value="03">March</option>
+          <option value="04">April</option>
+          <option value="05">May</option>
+          <option value="06">June</option>
+          <option value="07">July</option>
+          <option value="08">August</option>
+          <option value="09">September</option>
+          <option value="10">October</option>
+          <option value="11">November</option>
+          <option value="12">December</option>
+        </select>
+        <select class="rt-select" id="to-year" style="width:90px;"></select>
+      </div>
+    </div>
+
+    <!-- Status filter -->
+    <div class="period-select-group">
+      <label>Filter by status</label>
+      <select class="rt-select" id="filter-status" style="width:185px;">
+        <option value="">All statuses</option>
+        <option value="matched">✓ Matched</option>
+        <option value="missing_deposit">⚠ Missing deposit</option>
+        <option value="unverified">? Unverified income</option>
+        <option value="arrears">✗ Arrears</option>
+      </select>
+    </div>
+
+    <div class="period-select-group">
+      <label>&nbsp;</label>
+      <button class="button" style="height:40px;font-size:0.875rem;" onclick="applyFilters()">
+        Filter results
       </button>
     </div>
+
   </div>
 </div>
 
@@ -53,70 +157,121 @@
 <div class="rt-card">
   <div style="margin-bottom:1rem;">
     <div style="font-size:1rem;font-weight:600;color:#111827;">Reconciliation results</div>
-    <div style="font-size:0.78rem;color:#6b7280;" id="results-count">Loading…</div>
+    <div style="font-size:0.78rem;color:#6b7280;" id="results-subtitle">
+      Select a period above and click <strong>Run reconciliation</strong> to start.
+    </div>
   </div>
 
-  <div id="reconcile-results"
-       hx-get="/api/reconcile/results"
-       hx-trigger="load"
-       hx-swap="innerHTML">
-    <div style="text-align:center;padding:2rem;color:#9ca3af;font-size:0.875rem;">Loading…</div>
-  </div>
+  <div id="reconcile-results"></div>
 </div>
 
 {% endblock %}
 
 {% block scripts %}
 <script>
-  async function runReconciliation() {
-    const status = document.getElementById('reconcile-status');
-    const period = document.getElementById('filter-period').value;
+  // ── Populate year dropdowns ──
+  (function () {
+    const currentYear = new Date().getFullYear();
+    ['from-year', 'to-year'].forEach(id => {
+      const sel = document.getElementById(id);
+      for (let y = currentYear; y >= currentYear - 5; y--) {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = y;
+        sel.appendChild(opt);
+      }
+    });
 
-    status.style.display = 'block';
-    status.innerHTML = `
-      <div class="notification is-info is-light" style="padding:0.75rem 1rem;font-size:0.875rem;">
-        Running reconciliation…
+    // Default: from = January this year, to = current month
+    const currentMonth = String(new Date().getMonth() + 1).padStart(2, '0');
+    document.getElementById('from-month').value = '01';
+    document.getElementById('to-month').value   = currentMonth;
+  })();
+
+  function getFromPeriod() {
+    return `${document.getElementById('from-year').value}-${document.getElementById('from-month').value}`;
+  }
+
+  function getToPeriod() {
+    return `${document.getElementById('to-year').value}-${document.getElementById('to-month').value}`;
+  }
+
+  function periodLabel() {
+    const months = ['','January','February','March','April','May','June','July','August','September','October','November','December'];
+    const fm = document.getElementById('from-month').value;
+    const fy = document.getElementById('from-year').value;
+    const tm = document.getElementById('to-month').value;
+    const ty = document.getElementById('to-year').value;
+    if (fm === tm && fy === ty) return `${months[parseInt(fm)]} ${fy}`;
+    return `${months[parseInt(fm)]} ${fy} — ${months[parseInt(tm)]} ${ty}`;
+  }
+
+  async function runReconciliation() {
+    const statusEl = document.getElementById('reconcile-status');
+    const from     = getFromPeriod();
+    const to       = getToPeriod();
+
+    if (from > to) {
+      statusEl.style.display = 'block';
+      statusEl.innerHTML = `<div class="notification is-warning is-light" style="padding:0.75rem 1rem;font-size:0.875rem;">
+        The "From" period cannot be after the "To" period.
       </div>`;
+      return;
+    }
+
+    statusEl.style.display = 'block';
+    statusEl.innerHTML = `<div class="notification is-info is-light" style="padding:0.75rem 1rem;font-size:0.875rem;">
+      Running reconciliation for <strong>${periodLabel()}</strong>…
+    </div>`;
 
     try {
       const res  = await fetch('/api/reconcile/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ period: period || null }),
+        body: JSON.stringify({ from_period: from, to_period: to }),
       });
       const data = await res.json();
 
       if (data.success) {
-        status.innerHTML = `
-          <div class="notification is-success is-light" style="padding:0.75rem 1rem;font-size:0.875rem;">
-            ✓ Reconciliation complete — ${data.total} records processed.
-            <button class="delete" onclick="this.parentElement.parentElement.style.display='none'"></button>
-          </div>`;
-        htmx.trigger('#reconcile-results', 'load');
+        statusEl.innerHTML = `<div class="notification is-success is-light" style="padding:0.75rem 1rem;font-size:0.875rem;">
+          ✓ Done — ${data.total} records processed for <strong>${periodLabel()}</strong>.
+          <button class="delete" onclick="this.parentElement.parentElement.style.display='none'"></button>
+        </div>`;
+        loadResults();
       } else {
-        status.innerHTML = `
-          <div class="notification is-danger is-light" style="padding:0.75rem 1rem;font-size:0.875rem;">
-            ${data.error || 'Reconciliation failed.'}
-            <button class="delete" onclick="this.parentElement.parentElement.style.display='none'"></button>
-          </div>`;
+        statusEl.innerHTML = `<div class="notification is-danger is-light" style="padding:0.75rem 1rem;font-size:0.875rem;">
+          ${data.error || 'Reconciliation failed.'}
+          <button class="delete" onclick="this.parentElement.parentElement.style.display='none'"></button>
+        </div>`;
       }
     } catch (e) {
-      status.innerHTML = `
-        <div class="notification is-danger is-light" style="padding:0.75rem 1rem;font-size:0.875rem;">
-          Something went wrong. Please try again.
-        </div>`;
+      statusEl.innerHTML = `<div class="notification is-danger is-light" style="padding:0.75rem 1rem;font-size:0.875rem;">
+        Something went wrong. Please try again.
+      </div>`;
     }
   }
 
   function applyFilters() {
-    const period = document.getElementById('filter-period').value;
+    loadResults();
+  }
+
+  function loadResults() {
+    const from   = getFromPeriod();
+    const to     = getToPeriod();
     const status = document.getElementById('filter-status').value;
-    const params = new URLSearchParams();
-    if (period) params.set('period', period);
+    const params = new URLSearchParams({ from_period: from, to_period: to });
     if (status) params.set('status', status);
-    const target = document.getElementById('reconcile-results');
-    target.setAttribute('hx-get', `/api/reconcile/results?${params.toString()}`);
-    htmx.trigger(target, 'load');
+
+    document.getElementById('results-subtitle').innerHTML =
+      `Showing results for <strong>${periodLabel()}</strong>`;
+
+    htmx.ajax('GET', `/api/reconcile/results?${params.toString()}`, '#reconcile-results');
+  }
+
+  function exportReport() {
+    const from = getFromPeriod();
+    const to   = getToPeriod();
+    window.location.href = `/api/reports/export?from_period=${from}&to_period=${to}`;
   }
 </script>
 {% endblock %}

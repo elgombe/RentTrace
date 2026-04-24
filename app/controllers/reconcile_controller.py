@@ -10,143 +10,123 @@ from app.models.reconcile_model import Reconciliation
 MATCH_TOLERANCE = 1.00
 
 
-def run_reconciliation(period: str = None) -> dict:
-    """
-    Core matching engine. Compares:
-      A. Expected rent  (from tenants table)
-      B. Receipts       (uploaded receipt records)
-      C. Bank deposits  (uploaded bank statement)
-
-    Rules:
-      1. Receipt amount matches bank deposit → MATCHED
-      2. Receipt exists but no matching bank deposit → MISSING DEPOSIT
-      3. Bank deposit exists but no receipt → UNVERIFIED INCOME
-      4. Expected rent with no receipt and no deposit → ARREARS
-    """
+def run_reconciliation(from_period: str = None, to_period: str = None) -> dict:
     try:
-        # ── Determine period ──
-        if period:
-            year, month = map(int, period.split("-"))
-        else:
-            today = date.today()
-            year, month = today.year, today.month
+        today = date.today()
 
-        period_str  = f"{year}-{month:02d}"
-        month_start = date(year, month, 1)
-        if month == 12:
-            month_end = date(year + 1, 1, 1)
-        else:
-            month_end = date(year, month + 1, 1)
+        if not from_period:
+            from_period = f"{today.year}-{today.month:02d}"
+        if not to_period:
+            to_period = from_period
 
-        # ── Clear existing results for this period ──
-        Reconciliation.query.filter_by(period=period_str).delete()
-        db.session.flush()
+        # Build list of YYYY-MM periods in range
+        def period_months(fp, tp):
+            fy, fm = map(int, fp.split("-"))
+            ty, tm = map(int, tp.split("-"))
+            periods = []
+            y, m = fy, fm
+            while (y, m) <= (ty, tm):
+                periods.append(f"{y}-{m:02d}")
+                m += 1
+                if m > 12:
+                    m = 1
+                    y += 1
+            return periods
 
-        tenants      = Tenant.query.all()
-        bank_txns    = BankTransaction.query.filter(
-            BankTransaction.date >= month_start,
-            BankTransaction.date <  month_end,
-            BankTransaction.amount > 0,
-        ).all()
-        receipts     = Receipt.query.filter(
-            Receipt.date >= month_start,
-            Receipt.date <  month_end,
-        ).all()
+        periods = period_months(from_period, to_period)
+        total   = 0
 
-        used_txn_ids     = set()
-        used_receipt_ids = set()
-        results          = []
+        for period_str in periods:
+            year, month = map(int, period_str.split("-"))
+            month_start = date(year, month, 1)
+            month_end   = date(year + 1, 1, 1) if month == 12 else date(year, month + 1, 1)
 
-        # ── Per tenant: try to match receipt + bank deposit ──
-        for tenant in tenants:
-            tenant_receipts = [r for r in receipts if r.tenant_id == tenant.id]
+            Reconciliation.query.filter_by(period=period_str).delete()
+            db.session.flush()
 
-            if not tenant_receipts:
-                # Rule 4: expected rent, no receipt → ARREARS
-                results.append(Reconciliation(
-                    tenant_id=tenant.id,
-                    receipt_id=None,
-                    transaction_id=None,
-                    expected_amount=tenant.monthly_rent,
-                    status="arrears",
-                    flag_reason="No receipt found for this period",
-                    period=period_str,
-                ))
-                continue
+            tenants   = Tenant.query.all()
+            bank_txns = BankTransaction.query.filter(
+                BankTransaction.date >= month_start,
+                BankTransaction.date <  month_end,
+                BankTransaction.amount > 0,
+            ).all()
+            receipts  = Receipt.query.filter(
+                Receipt.date >= month_start,
+                Receipt.date <  month_end,
+            ).all()
 
-            for receipt in tenant_receipts:
-                used_receipt_ids.add(receipt.id)
+            used_txn_ids     = set()
+            used_receipt_ids = set()
+            results          = []
 
-                # Find a matching bank deposit within tolerance
-                matched_txn = next((
-                    t for t in bank_txns
-                    if t.id not in used_txn_ids
-                    and abs(t.amount - receipt.amount) <= MATCH_TOLERANCE
-                ), None)
+            for tenant in tenants:
+                tenant_receipts = [r for r in receipts if r.tenant_id == tenant.id]
 
-                if matched_txn:
-                    # Rule 1: receipt matches bank deposit → MATCHED
-                    used_txn_ids.add(matched_txn.id)
+                if not tenant_receipts:
                     results.append(Reconciliation(
-                        tenant_id=tenant.id,
-                        receipt_id=receipt.id,
-                        transaction_id=matched_txn.id,
-                        expected_amount=tenant.monthly_rent,
-                        status="matched",
-                        flag_reason=None,
+                        tenant_id=tenant.id, receipt_id=None, transaction_id=None,
+                        expected_amount=tenant.monthly_rent, status="arrears",
+                        flag_reason="No receipt found for this period", period=period_str,
+                    ))
+                    continue
+
+                for receipt in tenant_receipts:
+                    used_receipt_ids.add(receipt.id)
+                    matched_txn = next((
+                        t for t in bank_txns
+                        if t.id not in used_txn_ids
+                        and abs(t.amount - receipt.amount) <= MATCH_TOLERANCE
+                    ), None)
+
+                    if matched_txn:
+                        used_txn_ids.add(matched_txn.id)
+                        results.append(Reconciliation(
+                            tenant_id=tenant.id, receipt_id=receipt.id,
+                            transaction_id=matched_txn.id,
+                            expected_amount=tenant.monthly_rent, status="matched",
+                            flag_reason=None, period=period_str,
+                        ))
+                    else:
+                        results.append(Reconciliation(
+                            tenant_id=tenant.id, receipt_id=receipt.id,
+                            transaction_id=None, expected_amount=tenant.monthly_rent,
+                            status="missing_deposit",
+                            flag_reason=f"Receipt #{receipt.receipt_number or receipt.id} has no matching bank deposit",
+                            period=period_str,
+                        ))
+
+            for txn in bank_txns:
+                if txn.id not in used_txn_ids:
+                    results.append(Reconciliation(
+                        tenant_id=None, receipt_id=None, transaction_id=txn.id,
+                        expected_amount=None, status="unverified",
+                        flag_reason=f"Bank deposit of ${txn.amount:.2f} on {txn.date} has no matching receipt",
                         period=period_str,
                     ))
-                else:
-                    # Rule 2: receipt exists but no bank deposit → MISSING DEPOSIT
-                    results.append(Reconciliation(
-                        tenant_id=tenant.id,
-                        receipt_id=receipt.id,
-                        transaction_id=None,
-                        expected_amount=tenant.monthly_rent,
-                        status="missing_deposit",
-                        flag_reason=f"Receipt #{receipt.receipt_number or receipt.id} has no matching bank deposit",
-                        period=period_str,
-                    ))
 
-        # Rule 3: bank deposits with no receipt → UNVERIFIED INCOME
-        for txn in bank_txns:
-            if txn.id not in used_txn_ids:
-                results.append(Reconciliation(
-                    tenant_id=None,
-                    receipt_id=None,
-                    transaction_id=txn.id,
-                    expected_amount=None,
-                    status="unverified",
-                    flag_reason=f"Bank deposit of ${txn.amount:.2f} on {txn.date} has no matching receipt",
-                    period=period_str,
-                ))
+            for r in results:
+                db.session.add(r)
 
-        for r in results:
-            db.session.add(r)
+            total += len(results)
 
         db.session.commit()
-
-        return {
-            "success": True,
-            "total":   len(results),
-            "period":  period_str,
-        }
+        return {"success": True, "total": total, "from_period": from_period, "to_period": to_period}
 
     except Exception as e:
         db.session.rollback()
         return {"success": False, "error": str(e)}
 
-
-def get_results(period: str = None, status: str = None):
+def get_results(from_period: str = None, to_period: str = None, status: str = None):
     query = Reconciliation.query
 
-    if period:
-        query = query.filter_by(period=period)
+    if from_period:
+        query = query.filter(Reconciliation.period >= from_period)
+    if to_period:
+        query = query.filter(Reconciliation.period <= to_period)
     if status:
         query = query.filter_by(status=status)
 
-    return query.order_by(Reconciliation.created_at.desc()).all()
-
+    return query.order_by(Reconciliation.period, Reconciliation.created_at).all()
 
 def get_recent_exceptions(limit: int = 10):
     return Reconciliation.query.filter(

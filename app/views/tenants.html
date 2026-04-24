@@ -5,7 +5,6 @@
 
 {% block head %}
 <style>
-  /* ── Modern modal overlay ── */
   .rt-modal-overlay {
     display: none;
     position: fixed;
@@ -20,7 +19,7 @@
 
   .rt-modal {
     background: #fff;
-    border-radius: 18px;
+    border-radius: 0px;
     width: 100%;
     max-width: 500px;
     box-shadow: 0 24px 64px rgba(0,0,0,0.18);
@@ -33,7 +32,6 @@
     to   { opacity: 1; transform: translateY(0) scale(1); }
   }
 
-  /* ── Modal header ── */
   .rt-modal-header {
     background: #141414;
     padding: 1.4rem 1.75rem;
@@ -63,10 +61,8 @@
   }
   .rt-modal-close:hover { background: rgba(255,255,255,0.15); color: #fff; }
 
-  /* ── Modal body ── */
   .rt-modal-body { padding: 1.75rem; }
 
-  /* ── Field groups ── */
   .rt-field { margin-bottom: 1.1rem; }
   .rt-field:last-child { margin-bottom: 0; }
 
@@ -106,7 +102,6 @@
     gap: 0.85rem;
   }
 
-  /* ── Input with prefix ── */
   .rt-input-wrap { position: relative; }
   .rt-input-prefix {
     position: absolute;
@@ -118,7 +113,6 @@
   }
   .rt-input-wrap .rt-input { padding-left: 1.6rem; }
 
-  /* ── Error ── */
   .rt-field-error {
     display: none;
     font-size: 0.78rem;
@@ -131,7 +125,6 @@
   }
   .rt-field-error.is-visible { display: block; }
 
-  /* ── Modal footer ── */
   .rt-modal-footer {
     padding: 1rem 1.75rem 1.5rem;
     display: flex;
@@ -172,7 +165,6 @@
   }
   .rt-btn-cancel:hover { background: #e5e7eb; }
 
-  /* ── Spinner ── */
   .rt-spinner {
     display: none;
     width: 14px; height: 14px;
@@ -196,7 +188,7 @@
   </button>
 </div>
 
-<!-- ── Tenant table ── -->
+<!-- Tenant table -->
 <div class="rt-card">
   <div id="tenants-table"
        hx-get="/api/tenants"
@@ -206,11 +198,10 @@
   </div>
 </div>
 
-<!-- ── Modern Modal ── -->
+<!-- Modal -->
 <div class="rt-modal-overlay" id="tenant-modal" onclick="handleOverlayClick(event)">
   <div class="rt-modal">
 
-    <!-- Header -->
     <div class="rt-modal-header">
       <div>
         <div class="rt-modal-header-title" id="modal-title">Add tenant</div>
@@ -223,17 +214,14 @@
       </button>
     </div>
 
-    <!-- Body -->
     <div class="rt-modal-body">
       <input type="hidden" id="tenant-id"/>
 
-      <!-- Full name -->
       <div class="rt-field">
         <label class="rt-label" for="tenant-name">Full name</label>
         <input class="rt-input" type="text" id="tenant-name" placeholder="e.g. James Moyo" autocomplete="off"/>
       </div>
 
-      <!-- Unit + Rent -->
       <div class="rt-input-group">
         <div class="rt-field">
           <label class="rt-label" for="tenant-unit">Unit number</label>
@@ -248,7 +236,6 @@
         </div>
       </div>
 
-      <!-- Lease dates -->
       <div class="rt-input-group">
         <div class="rt-field">
           <label class="rt-label" for="tenant-lease-start">Lease start</label>
@@ -260,11 +247,9 @@
         </div>
       </div>
 
-      <!-- Error -->
       <div class="rt-field-error" id="modal-error"></div>
     </div>
 
-    <!-- Footer -->
     <div class="rt-modal-footer">
       <button class="rt-btn-cancel" onclick="closeModal()">Cancel</button>
       <button class="rt-btn-save" id="modal-save-btn" onclick="saveTenant()">
@@ -280,6 +265,10 @@
 
 {% block scripts %}
 <script>
+  function refreshTable() {
+    htmx.ajax('GET', '/api/tenants', '#tenants-table');
+  }
+
   function openAddModal() {
     document.getElementById('modal-title').textContent    = 'Add tenant';
     document.getElementById('modal-subtitle').textContent = 'Fill in the tenant and lease details below';
@@ -315,7 +304,6 @@
     if (e.target === document.getElementById('tenant-modal')) closeModal();
   }
 
-  // Close on Escape key
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeModal();
   });
@@ -356,7 +344,7 @@
 
       if (data.success) {
         closeModal();
-        htmx.trigger('#tenants-table', 'load');
+        refreshTable();
       } else {
         error.textContent = data.error || 'Failed to save tenant.';
         error.classList.add('is-visible');
@@ -373,7 +361,7 @@
   async function deleteTenant(id) {
     if (!confirm('Delete this tenant? This cannot be undone.')) return;
     await fetch(`/api/tenants/${id}`, { method: 'DELETE' });
-    htmx.trigger('#tenants-table', 'load');
+    refreshTable();
   }
 </script>
 {% endblock %}

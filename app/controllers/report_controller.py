@@ -5,7 +5,7 @@ from app.models.reconcile_model import Reconciliation
 from app.controllers.reconcile_controller import get_summary
 
 
-def generate_pdf_report(period: str = None) -> dict:
+def generate_pdf_report(from_period: str = None, to_period: str = None) -> dict:
     try:
         from reportlab.lib.pagesizes import A4
         from reportlab.lib import colors
@@ -15,22 +15,53 @@ def generate_pdf_report(period: str = None) -> dict:
             SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
         )
     except ImportError:
-        return {"success": False, "error": "reportlab is required for PDF export. Run: pip install reportlab"}
+        return {"success": False, "error": "reportlab is required. Run: pip install reportlab"}
 
     try:
-        if not period:
-            today  = date.today()
-            period = f"{today.year}-{today.month:02d}"
+        today = date.today()
 
-        summary = get_summary()
-        rows    = Reconciliation.query.filter_by(period=period).order_by(
-            Reconciliation.status
-        ).all()
+        if not from_period:
+            from_period = f"{today.year}-{today.month:02d}"
+        if not to_period:
+            to_period = from_period
+
+        # ── Fetch rows for range ──
+        rows = Reconciliation.query.filter(
+            Reconciliation.period >= from_period,
+            Reconciliation.period <= to_period,
+        ).order_by(Reconciliation.period, Reconciliation.status).all()
+
+        # ── Summary scoped to this range ──
+        matched    = sum(1 for r in rows if r.status == "matched")
+        missing    = sum(1 for r in rows if r.status == "missing_deposit")
+        unverified = sum(1 for r in rows if r.status == "unverified")
+        arrears    = sum(1 for r in rows if r.status == "arrears")
+        expected   = sum(r.expected_amount or 0 for r in rows if r.status == "matched")
+        collected  = sum(
+            r.transaction.amount for r in rows
+            if r.status == "matched" and r.transaction
+        )
+        leakage    = max(0.0, expected - collected)
+
+        summary = {
+            "matched": matched, "missing": missing,
+            "unverified": unverified, "arrears": arrears,
+            "expected": round(expected, 2),
+            "collected": round(collected, 2),
+            "leakage": round(leakage, 2),
+        }
+
+        # ── Period label ──
+        if from_period == to_period:
+            period_label = from_period
+        else:
+            period_label = f"{from_period} to {to_period}"
 
         # ── Output path ──
-        filename = f"RentTrace_Report_{period}.pdf"
-        out_dir  = os.path.join(current_app.config.get("UPLOAD_FOLDER", "data/uploads"))
-        out_path = os.path.join(out_dir, filename)
+        safe_label = period_label.replace(" ", "_").replace("/", "-")
+        filename   = f"RentTrace_Report_{safe_label}.pdf"
+        out_dir    = current_app.config.get("UPLOAD_FOLDER", "data/uploads")
+        out_path   = os.path.join(out_dir, filename)
 
         doc    = SimpleDocTemplate(out_path, pagesize=A4,
                                    leftMargin=2*cm, rightMargin=2*cm,
@@ -46,8 +77,12 @@ def generate_pdf_report(period: str = None) -> dict:
                                      fontSize=10, textColor=colors.HexColor("#6b7280"),
                                      spaceAfter=16)
         story.append(Paragraph("RentTrace — Audit Report", title_style))
-        story.append(Paragraph(f"Period: {period} &nbsp;|&nbsp; Generated: {datetime.now().strftime('%d %b %Y %H:%M')}", sub_style))
-        story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#e5e7eb"), spaceAfter=16))
+        story.append(Paragraph(
+            f"Period: {period_label} &nbsp;|&nbsp; Generated: {datetime.now().strftime('%d %b %Y %H:%M')}",
+            sub_style
+        ))
+        story.append(HRFlowable(width="100%", thickness=1,
+                                color=colors.HexColor("#e5e7eb"), spaceAfter=16))
 
         # ── Summary table ──
         summary_data = [
@@ -63,20 +98,19 @@ def generate_pdf_report(period: str = None) -> dict:
 
         summary_table = Table(summary_data, colWidths=[9*cm, 6*cm])
         summary_table.setStyle(TableStyle([
-            ("BACKGROUND",   (0, 0), (-1, 0),  colors.HexColor("#141414")),
-            ("TEXTCOLOR",    (0, 0), (-1, 0),  colors.white),
-            ("FONTNAME",     (0, 0), (-1, 0),  "Helvetica-Bold"),
-            ("FONTSIZE",     (0, 0), (-1, 0),  10),
-            ("FONTSIZE",     (0, 1), (-1, -1), 9),
-            ("ROWBACKGROUNDS",(0,1),(-1,-1),   [colors.HexColor("#f9fafb"), colors.white]),
-            ("GRID",         (0, 0), (-1, -1), 0.5, colors.HexColor("#e5e7eb")),
-            ("LEFTPADDING",  (0, 0), (-1, -1), 8),
-            ("RIGHTPADDING", (0, 0), (-1, -1), 8),
-            ("TOPPADDING",   (0, 0), (-1, -1), 6),
-            ("BOTTOMPADDING",(0, 0), (-1, -1), 6),
-            # Highlight leakage in red
-            ("TEXTCOLOR",    (1, 3), (1, 3),   colors.HexColor("#b91c1c")),
-            ("FONTNAME",     (1, 3), (1, 3),   "Helvetica-Bold"),
+            ("BACKGROUND",    (0, 0), (-1, 0),  colors.HexColor("#141414")),
+            ("TEXTCOLOR",     (0, 0), (-1, 0),  colors.white),
+            ("FONTNAME",      (0, 0), (-1, 0),  "Helvetica-Bold"),
+            ("FONTSIZE",      (0, 0), (-1, 0),  10),
+            ("FONTSIZE",      (0, 1), (-1, -1), 9),
+            ("ROWBACKGROUNDS",(0, 1), (-1, -1), [colors.HexColor("#f9fafb"), colors.white]),
+            ("GRID",          (0, 0), (-1, -1), 0.5, colors.HexColor("#e5e7eb")),
+            ("LEFTPADDING",   (0, 0), (-1, -1), 8),
+            ("RIGHTPADDING",  (0, 0), (-1, -1), 8),
+            ("TOPPADDING",    (0, 0), (-1, -1), 6),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ("TEXTCOLOR",     (1, 3), (1, 3),   colors.HexColor("#b91c1c")),
+            ("FONTNAME",      (1, 3), (1, 3),   "Helvetica-Bold"),
         ]))
 
         story.append(Paragraph("Summary", styles["Heading2"]))
@@ -88,7 +122,7 @@ def generate_pdf_report(period: str = None) -> dict:
         story.append(Paragraph("Transaction Details", styles["Heading2"]))
         story.append(Spacer(1, 0.3*cm))
 
-        detail_data = [["Tenant", "Expected", "Status", "Flag reason"]]
+        detail_data = [["Period", "Tenant", "Expected", "Status", "Flag reason"]]
         status_colors = {
             "matched":         colors.HexColor("#15803d"),
             "missing_deposit": colors.HexColor("#b91c1c"),
@@ -101,9 +135,9 @@ def generate_pdf_report(period: str = None) -> dict:
             expected    = f"${r.expected_amount:.2f}" if r.expected_amount else "—"
             status      = r.status.replace("_", " ").title()
             flag        = r.flag_reason or "—"
-            detail_data.append([tenant_name, expected, status, flag])
+            detail_data.append([r.period or "—", tenant_name, expected, status, flag])
 
-        detail_table = Table(detail_data, colWidths=[4.5*cm, 3*cm, 3.5*cm, 6*cm])
+        detail_table = Table(detail_data, colWidths=[2.5*cm, 4*cm, 2.5*cm, 3*cm, 5*cm])
         detail_table.setStyle(TableStyle([
             ("BACKGROUND",    (0, 0), (-1, 0),  colors.HexColor("#141414")),
             ("TEXTCOLOR",     (0, 0), (-1, 0),  colors.white),
@@ -115,29 +149,29 @@ def generate_pdf_report(period: str = None) -> dict:
             ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
             ("TOPPADDING",    (0, 0), (-1, -1), 5),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-            ("WORDWRAP",      (3, 1), (3, -1),  True),
+            ("WORDWRAP",      (4, 1), (4, -1),  True),
         ]))
 
-        # Colour status column per row
         for i, r in enumerate(rows, start=1):
             col = status_colors.get(r.status, colors.black)
             detail_table.setStyle(TableStyle([
-                ("TEXTCOLOR", (2, i), (2, i), col),
-                ("FONTNAME",  (2, i), (2, i), "Helvetica-Bold"),
+                ("TEXTCOLOR", (3, i), (3, i), col),
+                ("FONTNAME",  (3, i), (3, i), "Helvetica-Bold"),
             ]))
 
         story.append(detail_table)
         story.append(Spacer(1, 0.8*cm))
 
         # ── Footer ──
-        story.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#e5e7eb"), spaceAfter=8))
+        story.append(HRFlowable(width="100%", thickness=0.5,
+                                color=colors.HexColor("#e5e7eb"), spaceAfter=8))
         story.append(Paragraph(
             "This report was generated by RentTrace. It is intended for audit and forensic review purposes only.",
-            ParagraphStyle("Footer", parent=styles["Normal"], fontSize=8, textColor=colors.HexColor("#9ca3af"))
+            ParagraphStyle("Footer", parent=styles["Normal"],
+                           fontSize=8, textColor=colors.HexColor("#9ca3af"))
         ))
 
         doc.build(story)
-
         return {"success": True, "path": out_path, "filename": filename}
 
     except Exception as e:

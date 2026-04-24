@@ -14,20 +14,21 @@ reconcile_bp = Blueprint("reconcile", __name__)
 @reconcile_bp.route("/run", methods=["POST"])
 @login_required
 def run():
-    data   = request.get_json() or {}
-    period = data.get("period")
-    result = run_reconciliation(period)
+    data        = request.get_json() or {}
+    from_period = data.get("from_period")
+    to_period   = data.get("to_period")
+    result      = run_reconciliation(from_period, to_period)
     return jsonify(result), 200 if result["success"] else 400
 
 
 @reconcile_bp.route("/results", methods=["GET"])
 @login_required
 def results():
-    period = request.args.get("period")
-    status = request.args.get("status")
-    rows   = get_results(period=period, status=status)
+    from_period = request.args.get("from_period")
+    to_period   = request.args.get("to_period")
+    status      = request.args.get("status")
+    rows        = get_results(from_period=from_period, to_period=to_period, status=status)
     return render_template("partials/reconcile_table.html", results=rows)
-
 
 @reconcile_bp.route("/recent", methods=["GET"])
 @login_required

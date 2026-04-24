@@ -1,5 +1,15 @@
 from app.models.tenant_model import Tenant
 from app.models.database import db
+import arrow
+
+
+def _parse_date(val):
+    if not val:
+        return None
+    try:
+        return arrow.get(val).date()
+    except Exception:
+        return None
 
 
 def get_all_tenants():
@@ -14,8 +24,8 @@ def create_tenant(data: dict) -> dict:
     name         = (data.get("name") or "").strip()
     unit_number  = (data.get("unit_number") or "").strip()
     monthly_rent = data.get("monthly_rent")
-    lease_start  = data.get("lease_start") or None
-    lease_end    = data.get("lease_end") or None
+    lease_start  = _parse_date(data.get("lease_start"))
+    lease_end    = _parse_date(data.get("lease_end"))
 
     if not name:
         return {"success": False, "error": "Tenant name is required"}
@@ -49,8 +59,8 @@ def update_tenant(tenant_id: int, data: dict) -> dict:
     name         = (data.get("name") or "").strip()
     unit_number  = (data.get("unit_number") or "").strip()
     monthly_rent = data.get("monthly_rent")
-    lease_start  = data.get("lease_start") or None
-    lease_end    = data.get("lease_end") or None
+    lease_start  = _parse_date(data.get("lease_start"))
+    lease_end    = _parse_date(data.get("lease_end"))
 
     if not name:
         return {"success": False, "error": "Tenant name is required"}
@@ -59,7 +69,6 @@ def update_tenant(tenant_id: int, data: dict) -> dict:
     if monthly_rent is None or float(monthly_rent) <= 0:
         return {"success": False, "error": "Monthly rent must be greater than zero"}
 
-    # Check unit conflict — exclude current tenant
     conflict = Tenant.query.filter(
         Tenant.unit_number == unit_number,
         Tenant.id != tenant_id

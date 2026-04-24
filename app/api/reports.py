@@ -8,8 +8,9 @@ reports_bp = Blueprint("reports", __name__)
 @reports_bp.route("/export", methods=["GET"])
 @login_required
 def export():
-    period = request.args.get("period")
-    result = generate_pdf_report(period)
+    from_period = request.args.get("from_period")
+    to_period   = request.args.get("to_period")
+    result      = generate_pdf_report(from_period, to_period)
 
     if not result["success"]:
         return jsonify(result), 400
