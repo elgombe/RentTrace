@@ -1,0 +1,41 @@
+{% if receipts %}
+<table class="table rt-table is-fullwidth">
+  <thead>
+    <tr>
+      <th>Receipt #</th>
+      <th>Tenant</th>
+      <th>Amount</th>
+      <th>Date</th>
+      <th>File</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in receipts %}
+    <tr>
+      <td style="font-weight:500;">{{ r.receipt_number or '—' }}</td>
+      <td>{{ r.tenant.name if r.tenant else '<span style="color:#f59e0b;">Unassigned</span>' }}</td>
+      <td>${{ "%.2f"|format(r.amount) }}</td>
+      <td>{{ r.date }}</td>
+      <td style="font-size:0.78rem;color:#9ca3af;">
+        {% if r.file_path %}
+          {{ r.file_path.split('/')[-1] }}
+        {% else %}
+          —
+        {% endif %}
+      </td>
+      <td style="text-align:right;">
+        <button class="button is-small is-danger is-light"
+                onclick="deleteReceipt({{ r.id }})">
+          Delete
+        </button>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div style="text-align:center;padding:2rem;color:#9ca3af;font-size:0.875rem;">
+  No receipts uploaded yet.
+</div>
+{% endif %}

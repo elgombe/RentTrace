@@ -1,0 +1,28 @@
+{% if transactions %}
+<table class="table rt-table is-fullwidth">
+  <thead>
+    <tr>
+      <th>Date</th>
+      <th>Description</th>
+      <th>Amount</th>
+      <th>Reference</th>
+      <th>Source file</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for t in transactions %}
+    <tr>
+      <td>{{ t.date }}</td>
+      <td style="color:#6b7280;">{{ t.description or '—' }}</td>
+      <td style="font-weight:500;">${{ "%.2f"|format(t.amount) }}</td>
+      <td style="color:#6b7280;">{{ t.reference or '—' }}</td>
+      <td style="font-size:0.78rem;color:#9ca3af;">{{ t.source_file or '—' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div style="text-align:center;padding:2rem;color:#9ca3af;font-size:0.875rem;">
+  No bank transactions uploaded yet.
+</div>
+{% endif %}

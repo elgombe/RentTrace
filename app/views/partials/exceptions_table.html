@@ -1,0 +1,38 @@
+{% if results %}
+<table class="table rt-table is-fullwidth">
+  <thead>
+    <tr>
+      <th>Tenant</th>
+      <th>Period</th>
+      <th>Expected</th>
+      <th>Status</th>
+      <th>Flag reason</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in results %}
+    <tr>
+      <td style="font-weight:500;">{{ r.tenant.name if r.tenant else '—' }}</td>
+      <td>{{ r.period or '—' }}</td>
+      <td>${{ "%.2f"|format(r.expected_amount or 0) }}</td>
+      <td>
+        {% if r.status == 'missing_deposit' %}
+          <span class="rt-badge missing">Missing deposit</span>
+        {% elif r.status == 'unverified' %}
+          <span class="rt-badge unverified">Unverified</span>
+        {% elif r.status == 'arrears' %}
+          <span class="rt-badge arrears">Arrears</span>
+        {% else %}
+          <span class="rt-badge">{{ r.status }}</span>
+        {% endif %}
+      </td>
+      <td style="color:#6b7280;font-size:0.82rem;">{{ r.flag_reason or '—' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div style="text-align:center;padding:2rem;color:#9ca3af;font-size:0.875rem;">
+  No exceptions found. Run a reconciliation to see results here.
+</div>
+{% endif %}

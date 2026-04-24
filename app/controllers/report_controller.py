@@ -1,7 +1,7 @@
 import os
 from datetime import date, datetime
 from flask import current_app
-from app.models.reconciliation_model import Reconciliation
+from app.models.reconcile_model import Reconciliation
 from app.controllers.reconcile_controller import get_summary
 
 
