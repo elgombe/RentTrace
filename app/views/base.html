@@ -1,223 +1,562 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>{% block title %}RentTrace{% endblock %}</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}RentTrace{% endblock %}</title>
 
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.2/css/bulma.min.css"/>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
-  <script src="{{ url_for('static', filename='js/htmx.min.js') }}" defer></script>
-  <script src="{{ url_for('static', filename='js/charts.js') }}" defer></script>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bulma@1.0.2/css/bulma.min.css"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <script
+      src="{{ url_for('static', filename='js/htmx.min.js') }}"
+      defer
+    ></script>
+    <script
+      src="{{ url_for('static', filename='js/charts.js') }}"
+      defer
+    ></script>
 
-  <style>
-    :root {
-      --sidebar-bg:    #141414;
-      --sidebar-w:     240px;
-      --accent:        #22c55e;
-      --accent-soft:   rgba(34,197,94,0.12);
-      --page-bg:       #f4f5f7;
-      --sidebar-text:  rgba(255,255,255,0.55);
-      --sidebar-hover: rgba(255,255,255,0.07);
-      --sidebar-active:#1f1f1f;
-    }
+    <style>
+      :root {
+        --sidebar-bg: #141414;
+        --sidebar-w: 240px;
+        --accent: #22c55e;
+        --accent-soft: rgba(34, 197, 94, 0.12);
+        --page-bg: #f4f5f7;
+        --sidebar-text: rgba(255, 255, 255, 0.55);
+        --sidebar-hover: rgba(255, 255, 255, 0.07);
+        --sidebar-active: #1f1f1f;
+      }
 
-    html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: var(--page-bg); }
+      /* ── Reset ── */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html,
+      body {
+        height: 100%;
+        overflow: hidden;
+        font-family: "DM Sans", sans-serif;
+        background: var(--page-bg);
+      }
 
-    /* ── Layout ── */
-    .rt-wrapper   { display: flex; min-height: 100vh; }
-    .rt-sidebar   { width: var(--sidebar-w); min-height: 100vh; background: var(--sidebar-bg);
-                    display: flex; flex-direction: column; flex-shrink: 0; position: fixed;
-                    top: 0; left: 0; bottom: 0; z-index: 40; }
-    .rt-main      { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; }
-    .rt-topbar    { height: 64px; background: #fff; border-bottom: 1px solid #e5e7eb;
-                    display: flex; align-items: center; justify-content: space-between;
-                    padding: 0 1.75rem; position: sticky; top: 0; z-index: 30; }
-    .rt-content   { padding: 2rem 1.75rem; flex: 1; }
+      /* ── Layout ── */
+      .rt-wrapper {
+        display: flex;
+        height: 100vh;
+        overflow: hidden;
+      }
 
-    /* ── Sidebar brand ── */
-    .rt-brand     { padding: 1.5rem 1.5rem 1rem;
-                    font-size: 1.25rem; font-weight: 600; color: #fff; letter-spacing: -0.3px; }
-    .rt-brand span{ color: var(--accent); }
+      .rt-sidebar {
+        width: var(--sidebar-w);
+        height: 100vh;
+        background: var(--sidebar-bg);
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 40;
+        overflow: hidden;
+      }
 
-    /* ── Sidebar nav ── */
-    .rt-nav       { flex: 1; padding: 0.5rem 0.75rem; }
-    .rt-nav-label { font-size: 0.65rem; font-weight: 600; letter-spacing: 0.08em;
-                    color: rgba(255,255,255,0.25); text-transform: uppercase;
-                    padding: 1rem 0.75rem 0.4rem; }
-    .rt-nav a     { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0.75rem;
-                    border-radius: 8px; color: var(--sidebar-text); font-size: 0.875rem;
-                    font-weight: 400; text-decoration: none; transition: background 0.15s, color 0.15s; }
-    .rt-nav a:hover    { background: var(--sidebar-hover); color: #fff; }
-    .rt-nav a.is-active{ background: var(--sidebar-active); color: #fff; font-weight: 500; }
-    .rt-nav a .icon   { width: 18px; height: 18px; opacity: 0.7; flex-shrink: 0; }
-    .rt-nav a.is-active .icon { opacity: 1; }
+      .rt-main {
+        margin-left: var(--sidebar-w);
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        overflow: hidden;
+        min-width: 0;
+      }
 
-    /* ── Sidebar footer ── */
-    .rt-sidebar-footer { padding: 1rem 1.25rem; border-top: 1px solid rgba(255,255,255,0.07); }
-    .rt-sidebar-footer a { display: flex; align-items: center; gap: 0.6rem;
-                           color: var(--sidebar-text); font-size: 0.875rem; text-decoration: none;
-                           padding: 0.5rem 0.5rem; border-radius: 8px; transition: background 0.15s, color 0.15s; }
-    .rt-sidebar-footer a:hover { background: var(--sidebar-hover); color: #fff; }
+      .rt-topbar {
+        height: 64px;
+        background: #fff;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 1.75rem;
+        flex-shrink: 0;
+        z-index: 30;
+      }
 
-    /* ── Topbar ── */
-    .rt-page-title { font-size: 1.25rem; font-weight: 600; color: #111827; }
-    .rt-user       { display: flex; align-items: center; gap: 0.6rem; }
-    .rt-user-name  { font-size: 0.875rem; font-weight: 500; color: #111827; }
-    .rt-user-role  { font-size: 0.72rem; color: #6b7280; }
-    .rt-avatar     { width: 36px; height: 36px; border-radius: 50%; background: var(--accent-soft);
-                     display: flex; align-items: center; justify-content: center;
-                     color: var(--accent); font-weight: 600; font-size: 0.85rem; }
+      .rt-content {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 2rem 1.75rem;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(0, 0, 0, 0.12) transparent;
+      }
 
-    /* ── Cards ── */
-    .rt-card       { background: #fff; border-radius: 14px; padding: 1.5rem;
-                     box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04); }
+      .rt-content::-webkit-scrollbar {
+        width: 5px;
+      }
+      .rt-content::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .rt-content::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.12);
+        border-radius: 99px;
+      }
+      .rt-content::-webkit-scrollbar-thumb:hover {
+        background: var(--accent);
+      }
 
-    /* ── Stat cards ── */
-    .rt-stat-icon  { width: 42px; height: 42px; border-radius: 10px; display: flex;
-                     align-items: center; justify-content: center; flex-shrink: 0; }
-    .rt-stat-value { font-size: 1.6rem; font-weight: 600; color: #111827; line-height: 1.2; }
-    .rt-stat-label { font-size: 0.8rem; color: #6b7280; margin-bottom: 0.25rem; }
-    .rt-stat-delta { font-size: 0.72rem; font-weight: 500; padding: 2px 7px;
-                     border-radius: 20px; display: inline-block; margin-left: 0.4rem; }
-    .rt-stat-delta.is-up   { background: rgba(34,197,94,0.12); color: #15803d; }
-    .rt-stat-delta.is-down { background: rgba(239,68,68,0.10); color: #b91c1c; }
+      /* ── Sidebar brand ── */
+      .rt-brand {
+        padding: 1.5rem 1.5rem 1rem;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #fff;
+        letter-spacing: -0.3px;
+        flex-shrink: 0;
+      }
+      .rt-brand span {
+        color: var(--accent);
+      }
 
-    /* ── Status badges ── */
-    .rt-badge      { font-size: 0.72rem; font-weight: 500; padding: 3px 10px;
-                     border-radius: 20px; display: inline-block; }
-    .rt-badge.matched    { background: rgba(34,197,94,0.12); color: #15803d; }
-    .rt-badge.missing    { background: rgba(239,68,68,0.10); color: #b91c1c; }
-    .rt-badge.unverified { background: rgba(245,158,11,0.12); color: #92400e; }
-    .rt-badge.arrears    { background: rgba(59,130,246,0.10); color: #1d4ed8; }
+      /* ── Sidebar nav ── */
+      .rt-nav {
+        flex: 1;
+        padding: 0.5rem 0.75rem;
+        overflow-y: auto;
+        scrollbar-width: none;
+      }
+      .rt-nav::-webkit-scrollbar {
+        display: none;
+      }
+      .rt-nav-label {
+        font-size: 0.65rem;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        color: rgba(255, 255, 255, 0.25);
+        text-transform: uppercase;
+        padding: 1rem 0.75rem 0.4rem;
+      }
+      .rt-nav a {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.6rem 0.75rem;
+        border-radius: 8px;
+        color: var(--sidebar-text);
+        font-size: 0.875rem;
+        font-weight: 400;
+        text-decoration: none;
+        transition:
+          background 0.15s,
+          color 0.15s;
+      }
+      .rt-nav a:hover {
+        background: var(--sidebar-hover);
+        color: #fff;
+      }
+      .rt-nav a.is-active {
+        background: var(--sidebar-active);
+        color: #fff;
+        font-weight: 500;
+      }
+      .rt-nav a .icon {
+        width: 18px;
+        height: 18px;
+        opacity: 0.7;
+        flex-shrink: 0;
+      }
+      .rt-nav a.is-active .icon {
+        opacity: 1;
+      }
 
-    /* ── Table ── */
-    .rt-table th  { font-size: 0.75rem; font-weight: 600; color: #6b7280;
-                    text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid #e5e7eb !important; }
-    .rt-table td  { font-size: 0.875rem; color: #374151; vertical-align: middle !important;
-                    border-bottom: 1px solid #f3f4f6 !important; }
-    .rt-table tr:last-child td { border-bottom: none !important; }
+      /* ── Sidebar footer ── */
+      .rt-sidebar-footer {
+        padding: 1rem 1.25rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.07);
+        flex-shrink: 0;
+      }
+      .rt-sidebar-footer a {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        color: var(--sidebar-text);
+        font-size: 0.875rem;
+        text-decoration: none;
+        padding: 0.5rem 0.5rem;
+        border-radius: 8px;
+        transition:
+          background 0.15s,
+          color 0.15s;
+      }
+      .rt-sidebar-footer a:hover {
+        background: var(--sidebar-hover);
+        color: #fff;
+      }
 
-    /* ── Flash messages ── */
-    .rt-flash { position: fixed; top: 1rem; right: 1rem; z-index: 100; min-width: 280px; }
+      /* ── Topbar ── */
+      .rt-page-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #111827;
+      }
+      .rt-user {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+      }
+      .rt-user-name {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #111827;
+      }
+      .rt-user-role {
+        font-size: 0.72rem;
+        color: #6b7280;
+      }
+      .rt-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: var(--accent-soft);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--accent);
+        font-weight: 600;
+        font-size: 0.85rem;
+        flex-shrink: 0;
+      }
 
-    /* ── Accent button ── */
-    .button.is-accent { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 500; }
-    .button.is-accent:hover { background: #16a34a; border-color: #16a34a; color: #fff; }
+      /* ── Cards ── */
+      .rt-card {
+        background: #fff;
+        border-radius: 14px;
+        padding: 1.5rem;
+        box-shadow:
+          0 1px 3px rgba(0, 0, 0, 0.06),
+          0 4px 16px rgba(0, 0, 0, 0.04);
+      }
 
-    /* ── HTMX loading indicator ── */
-    .htmx-indicator { display: none; }
-    .htmx-request .htmx-indicator { display: inline-block; }
-  </style>
+      /* ── Stat cards ── */
+      .rt-stat-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .rt-stat-value {
+        font-size: 1.6rem;
+        font-weight: 600;
+        color: #111827;
+        line-height: 1.2;
+      }
+      .rt-stat-label {
+        font-size: 0.8rem;
+        color: #6b7280;
+        margin-bottom: 0.25rem;
+      }
+      .rt-stat-delta {
+        font-size: 0.72rem;
+        font-weight: 500;
+        padding: 2px 7px;
+        border-radius: 20px;
+        display: inline-block;
+        margin-left: 0.4rem;
+      }
+      .rt-stat-delta.is-up {
+        background: rgba(34, 197, 94, 0.12);
+        color: #15803d;
+      }
+      .rt-stat-delta.is-down {
+        background: rgba(239, 68, 68, 0.1);
+        color: #b91c1c;
+      }
 
-  {% block head %}{% endblock %}
-</head>
-<body>
+      /* ── Status badges ── */
+      .rt-badge {
+        font-size: 0.72rem;
+        font-weight: 500;
+        padding: 3px 10px;
+        border-radius: 20px;
+        display: inline-block;
+      }
+      .rt-badge.matched {
+        background: rgba(34, 197, 94, 0.12);
+        color: #15803d;
+      }
+      .rt-badge.missing {
+        background: rgba(239, 68, 68, 0.1);
+        color: #b91c1c;
+      }
+      .rt-badge.unverified {
+        background: rgba(245, 158, 11, 0.12);
+        color: #92400e;
+      }
+      .rt-badge.arrears {
+        background: rgba(59, 130, 246, 0.1);
+        color: #1d4ed8;
+      }
 
-<div class="rt-wrapper">
+      /* ── Table ── */
+      .rt-table th {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        border-bottom: 1px solid #e5e7eb !important;
+      }
+      .rt-table td {
+        font-size: 0.875rem;
+        color: #374151;
+        vertical-align: middle !important;
+        border-bottom: 1px solid #f3f4f6 !important;
+      }
+      .rt-table tr:last-child td {
+        border-bottom: none !important;
+      }
 
-  <!-- ── Sidebar ── -->
-  <aside class="rt-sidebar">
-    <div class="rt-brand">Rent<span>Trace</span></div>
+      /* ── Flash messages ── */
+      .rt-flash {
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        z-index: 100;
+        min-width: 280px;
+      }
 
-    <nav class="rt-nav">
-      <div class="rt-nav-label">Main</div>
-      <a href="{{ url_for('views.dashboard') }}" class="{% if request.endpoint == 'views.dashboard' %}is-active{% endif %}">
-        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                d="M4 6a2 2 0 012-2h3a2 2 0 012 2v3a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm9 0a2 2 0 012-2h3a2 2 0 012 2v3a2 2 0 01-2 2h-3a2 2 0 01-2-2V6zM4 15a2 2 0 012-2h3a2 2 0 012 2v3a2 2 0 01-2 2H6a2 2 0 01-2-2v-3zm9 0a2 2 0 012-2h3a2 2 0 012 2v3a2 2 0 01-2 2h-3a2 2 0 01-2-2v-3z"/>
-        </svg>
-        Dashboard
-      </a>
-      <a href="{{ url_for('views.tenants') }}" class="{% if request.endpoint == 'views.tenants' %}is-active{% endif %}">
-        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                d="M17 20h5v-2a4 4 0 00-4-4h-1M9 20H4v-2a4 4 0 014-4h1m4 6v-2m0 0a4 4 0 10-4-4 4 4 0 004 4z"/>
-        </svg>
-        Tenants
-      </a>
-      <a href="{{ url_for('views.upload') }}" class="{% if request.endpoint == 'views.upload' %}is-active{% endif %}">
-        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 12V4m0 0L8 8m4-4l4 4"/>
-        </svg>
-        Upload
-      </a>
-      <a href="{{ url_for('views.reconcile') }}" class="{% if request.endpoint == 'views.reconcile' %}is-active{% endif %}">
-        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-        </svg>
-        Reconcile
-      </a>
+      /* ── Accent button ── */
+      .button.is-accent {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+        font-weight: 500;
+      }
+      .button.is-accent:hover {
+        background: #16a34a;
+        border-color: #16a34a;
+        color: #fff;
+      }
 
-      <div class="rt-nav-label">System</div>
-      <a href="#">
-        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-        </svg>
-        Settings
-      </a>
-    </nav>
+      /* ── HTMX loading indicator ── */
+      .htmx-indicator {
+        display: none;
+      }
+      .htmx-request .htmx-indicator {
+        display: inline-block;
+      }
+    </style>
 
-    <div class="rt-sidebar-footer">
-      <div style="display:flex;align-items:center;gap:0.6rem;padding:0.5rem;margin-bottom:0.5rem;">
-        <div class="rt-avatar">{{ session.get('email', 'A')[0].upper() }}</div>
-        <div>
-          <div style="color:#fff;font-size:0.8rem;font-weight:500;">{{ session.get('email', '') }}</div>
-          <div style="color:rgba(255,255,255,0.35);font-size:0.7rem;">Auditor</div>
+    {% block head %}{% endblock %}
+  </head>
+  <body>
+    <div class="rt-wrapper">
+      <!-- ── Sidebar ── -->
+      <aside class="rt-sidebar">
+        <div class="rt-brand">Rent<span>Trace</span></div>
+
+        <nav class="rt-nav">
+          <div class="rt-nav-label">Main</div>
+          <a
+            href="{{ url_for('views.dashboard') }}"
+            class="{% if request.endpoint == 'views.dashboard' %}is-active{% endif %}"
+          >
+            <svg
+              class="icon"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.8"
+                d="M4 6a2 2 0 012-2h3a2 2 0 012 2v3a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm9 0a2 2 0 012-2h3a2 2 0 012 2v3a2 2 0 01-2 2h-3a2 2 0 01-2-2V6zM4 15a2 2 0 012-2h3a2 2 0 012 2v3a2 2 0 01-2 2H6a2 2 0 01-2-2v-3zm9 0a2 2 0 012-2h3a2 2 0 012 2v3a2 2 0 01-2 2h-3a2 2 0 01-2-2v-3z"
+              />
+            </svg>
+            Dashboard
+          </a>
+          <a
+            href="{{ url_for('views.tenants') }}"
+            class="{% if request.endpoint == 'views.tenants' %}is-active{% endif %}"
+          >
+            <svg
+              class="icon"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.8"
+                d="M17 20h5v-2a4 4 0 00-4-4h-1M9 20H4v-2a4 4 0 014-4h1m4 6v-2m0 0a4 4 0 10-4-4 4 4 0 004 4z"
+              />
+            </svg>
+            Tenants
+          </a>
+          <a
+            href="{{ url_for('views.upload') }}"
+            class="{% if request.endpoint == 'views.upload' %}is-active{% endif %}"
+          >
+            <svg
+              class="icon"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.8"
+                d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 12V4m0 0L8 8m4-4l4 4"
+              />
+            </svg>
+            Upload
+          </a>
+          <a
+            href="{{ url_for('views.reconcile') }}"
+            class="{% if request.endpoint == 'views.reconcile' %}is-active{% endif %}"
+          >
+            <svg
+              class="icon"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.8"
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+              />
+            </svg>
+            Reconcile
+          </a>
+
+          <div class="rt-nav-label">System</div>
+          <a href="#">
+            <svg
+              class="icon"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.8"
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+              />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.8"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              />
+            </svg>
+            Settings
+          </a>
+        </nav>
+
+        <div class="rt-sidebar-footer">
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              gap: 0.6rem;
+              padding: 0.5rem;
+              margin-bottom: 0.5rem;
+            "
+          >
+            <div class="rt-avatar">
+              {{ session.get('email', 'A')[0].upper() }}
+            </div>
+            <div>
+              <div style="color: #fff; font-size: 0.8rem; font-weight: 500">
+                {{ session.get('email', '') }}
+              </div>
+              <div style="color: rgba(255, 255, 255, 0.35); font-size: 0.7rem">
+                Auditor
+              </div>
+            </div>
+          </div>
+          <a href="#" hx-post="{{ url_for('auth.logout') }}" hx-target="body">
+            <svg
+              style="width: 16px; height: 16px"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="1.8"
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2h5a2 2 0 012 2v1"
+              />
+            </svg>
+            Log Out
+          </a>
         </div>
-      </div>
-      <a href="#" hx-post="{{ url_for('auth.logout') }}" hx-target="body">
-        <svg style="width:16px;height:16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
-                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2h5a2 2 0 012 2v1"/>
-        </svg>
-        Log Out
-      </a>
-    </div>
-  </aside>
+      </aside>
 
-  <!-- ── Main ── -->
-  <div class="rt-main">
+      <!-- ── Main ── -->
+      <div class="rt-main">
+        <!-- Topbar -->
+        <header class="rt-topbar">
+          <span class="rt-page-title"
+            >{% block page_title %}{% endblock %}</span
+          >
+          <div class="rt-user">
+            <div>
+              <div class="rt-user-name">{{ session.get('email', '') }}</div>
+              <div class="rt-user-role" style="text-align: right">Auditor</div>
+            </div>
+            <div class="rt-avatar">
+              {{ session.get('email', 'A')[0].upper() }}
+            </div>
+          </div>
+        </header>
 
-    <!-- Topbar -->
-    <header class="rt-topbar">
-      <span class="rt-page-title">{% block page_title %}{% endblock %}</span>
-      <div class="rt-user">
-        <div>
-          <div class="rt-user-name">{{ session.get('email', '') }}</div>
-          <div class="rt-user-role" style="text-align:right;">Auditor</div>
-        </div>
-        <div class="rt-avatar">{{ session.get('email', 'A')[0].upper() }}</div>
-      </div>
-    </header>
-
-    <!-- Flash messages -->
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %} {% if
+        messages %}
         <div class="rt-flash">
           {% for category, message in messages %}
-            <div class="notification is-{{ 'success' if category == 'success' else 'danger' }} is-light" style="margin-bottom:0.5rem;">
-              <button class="delete" onclick="this.parentElement.remove()"></button>
-              {{ message }}
-            </div>
+          <div
+            class="notification is-{{ 'success' if category == 'success' else 'danger' }} is-light"
+            style="margin-bottom: 0.5rem"
+          >
+            <button
+              class="delete"
+              onclick="this.parentElement.remove()"
+            ></button>
+            {{ message }}
+          </div>
           {% endfor %}
         </div>
-      {% endif %}
-    {% endwith %}
+        {% endif %} {% endwith %}
 
-    <!-- Page content -->
-    <main class="rt-content">
-      {% block content %}{% endblock %}
-    </main>
+        <!-- Page content -->
+        <main class="rt-content">{% block content %}{% endblock %}</main>
+      </div>
+    </div>
 
-  </div>
-</div>
-
-{% block scripts %}{% endblock %}
-</body>
+    {% block scripts %}{% endblock %}
+  </body>
 </html>

@@ -14,8 +14,7 @@ def index():
 def login():
     if "user_id" in session:
         return redirect(url_for("views.dashboard"))
-    return 'Login Page - not implemented yet'
-
+    return render_template("login.html")
 
 @views_bp.route("/dashboard")
 @login_required
