@@ -1,5 +1,8 @@
 import os
 from datetime import timedelta
+from dotenv import load_dotenv
+
+load_dotenv()  # Load environment variables from .env file
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "app")
@@ -26,5 +29,4 @@ class Config:
     ALLOWED_EXTENSIONS = {"csv", "xlsx", "xls", "pdf", "png", "jpg", "jpeg"}
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB
 
-    # ── Bcrypt ────────────────────────────────────────────────
-    BCRYPT_ROUNDS = 12
+    # ── Bcrypt ────────────────────────────────────�

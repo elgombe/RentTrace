@@ -3,7 +3,7 @@ from app.models.database import db
 from app.models.tenant_model import Tenant
 from app.models.transaction_model import BankTransaction
 from app.models.receipt_model import Receipt
-from app.models.reconciliation_model import Reconciliation
+from app.models.reconcile_model import Reconciliation
 
 
 # ── Tolerance for amount matching (e.g. rounding differences) ──
