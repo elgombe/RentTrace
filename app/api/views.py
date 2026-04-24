@@ -16,25 +16,26 @@ def login():
         return redirect(url_for("views.dashboard"))
     return render_template("login.html")
 
+
 @views_bp.route("/dashboard")
 @login_required
 def dashboard():
-    return 'Dashboard Page - not implemented yet'
+    return render_template("dashboard.html")
 
 
 @views_bp.route("/tenants")
 @login_required
 def tenants():
-    return 'Tenants Page - not implemented yet'
+    return render_template("tenants.html")
 
 
 @views_bp.route("/upload")
 @login_required
 def upload():
-    return 'Upload Page - not implemented yet'
+    return render_template("upload.html")
 
 
 @views_bp.route("/reconcile")
 @login_required
 def reconcile():
-    return 'Reconcile Page - not implemented yet'
+    return render_template("reconcile.html")

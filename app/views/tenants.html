@@ -3,13 +3,197 @@
 {% block title %}Tenants — RentTrace{% endblock %}
 {% block page_title %}Tenants{% endblock %}
 
+{% block head %}
+<style>
+  /* ── Modern modal overlay ── */
+  .rt-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .rt-modal-overlay.is-active { display: flex; }
+
+  .rt-modal {
+    background: #fff;
+    border-radius: 18px;
+    width: 100%;
+    max-width: 500px;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.18);
+    overflow: hidden;
+    animation: modalIn 0.2s ease;
+  }
+
+  @keyframes modalIn {
+    from { opacity: 0; transform: translateY(16px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* ── Modal header ── */
+  .rt-modal-header {
+    background: #141414;
+    padding: 1.4rem 1.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .rt-modal-header-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+  }
+  .rt-modal-header-sub {
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.4);
+    margin-top: 0.15rem;
+  }
+  .rt-modal-close {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+    border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,0.6);
+    transition: background 0.15s;
+    flex-shrink: 0;
+  }
+  .rt-modal-close:hover { background: rgba(255,255,255,0.15); color: #fff; }
+
+  /* ── Modal body ── */
+  .rt-modal-body { padding: 1.75rem; }
+
+  /* ── Field groups ── */
+  .rt-field { margin-bottom: 1.1rem; }
+  .rt-field:last-child { margin-bottom: 0; }
+
+  .rt-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.4rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  .rt-input {
+    width: 100%;
+    height: 44px;
+    padding: 0 0.9rem;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 0.875rem;
+    font-family: 'DM Sans', sans-serif;
+    color: #111827;
+    background: #f9fafb;
+    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    outline: none;
+  }
+  .rt-input:focus {
+    border-color: #22c55e;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(34,197,94,0.12);
+  }
+  .rt-input::placeholder { color: #9ca3af; }
+
+  .rt-input-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.85rem;
+  }
+
+  /* ── Input with prefix ── */
+  .rt-input-wrap { position: relative; }
+  .rt-input-prefix {
+    position: absolute;
+    left: 0.9rem; top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.875rem;
+    color: #6b7280;
+    pointer-events: none;
+  }
+  .rt-input-wrap .rt-input { padding-left: 1.6rem; }
+
+  /* ── Error ── */
+  .rt-field-error {
+    display: none;
+    font-size: 0.78rem;
+    color: #b91c1c;
+    margin-top: 0.85rem;
+    padding: 0.6rem 0.9rem;
+    background: rgba(239,68,68,0.06);
+    border: 1px solid rgba(239,68,68,0.15);
+    border-radius: 8px;
+  }
+  .rt-field-error.is-visible { display: block; }
+
+  /* ── Modal footer ── */
+  .rt-modal-footer {
+    padding: 1rem 1.75rem 1.5rem;
+    display: flex;
+    gap: 0.65rem;
+    justify-content: flex-end;
+    border-top: 1px solid #f3f4f6;
+  }
+
+  .rt-btn-save {
+    height: 40px;
+    padding: 0 1.4rem;
+    background: #22c55e;
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 0.875rem;
+    font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    transition: background 0.15s;
+    display: flex; align-items: center; gap: 0.4rem;
+  }
+  .rt-btn-save:hover { background: #16a34a; }
+  .rt-btn-save:disabled { background: #86efac; cursor: not-allowed; }
+
+  .rt-btn-cancel {
+    height: 40px;
+    padding: 0 1.2rem;
+    background: #f3f4f6;
+    border: none;
+    border-radius: 8px;
+    color: #374151;
+    font-size: 0.875rem;
+    font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .rt-btn-cancel:hover { background: #e5e7eb; }
+
+  /* ── Spinner ── */
+  .rt-spinner {
+    display: none;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .rt-btn-save.is-loading .rt-spinner { display: block; }
+  .rt-btn-save.is-loading .rt-btn-label { display: none; }
+</style>
+{% endblock %}
+
 {% block content %}
 
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;">
-  <div>
-    <div style="font-size:0.875rem;color:#6b7280;">Manage all tenant and lease records</div>
-  </div>
-  <button class="button is-accent" onclick="openAddModal()">+ Add tenant</button>
+  <div style="font-size:0.875rem;color:#6b7280;">Manage all tenant and lease records</div>
+  <button class="button is-accent" onclick="openAddModal()">
+    <span style="font-size:1.1rem;margin-right:0.3rem;">+</span> Add tenant
+  </button>
 </div>
 
 <!-- ── Tenant table ── -->
@@ -22,68 +206,73 @@
   </div>
 </div>
 
-<!-- ── Add / Edit Modal ── -->
-<div class="modal" id="tenant-modal">
-  <div class="modal-background" onclick="closeModal()"></div>
-  <div class="modal-card" style="border-radius:14px;max-width:480px;width:90%;">
-    <header class="modal-card-head" style="border-radius:14px 14px 0 0;border-bottom:1px solid #e5e7eb;">
-      <p class="modal-card-title" style="font-size:1rem;font-weight:600;" id="modal-title">Add tenant</p>
-      <button class="delete" onclick="closeModal()"></button>
-    </header>
-    <section class="modal-card-body">
+<!-- ── Modern Modal ── -->
+<div class="rt-modal-overlay" id="tenant-modal" onclick="handleOverlayClick(event)">
+  <div class="rt-modal">
+
+    <!-- Header -->
+    <div class="rt-modal-header">
+      <div>
+        <div class="rt-modal-header-title" id="modal-title">Add tenant</div>
+        <div class="rt-modal-header-sub" id="modal-subtitle">Fill in the tenant and lease details below</div>
+      </div>
+      <button class="rt-modal-close" onclick="closeModal()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="rt-modal-body">
       <input type="hidden" id="tenant-id"/>
 
-      <div class="field">
-        <label class="label" style="font-size:0.8rem;">Full name</label>
-        <div class="control">
-          <input class="input" type="text" id="tenant-name" placeholder="John Doe"/>
-        </div>
+      <!-- Full name -->
+      <div class="rt-field">
+        <label class="rt-label" for="tenant-name">Full name</label>
+        <input class="rt-input" type="text" id="tenant-name" placeholder="e.g. James Moyo" autocomplete="off"/>
       </div>
 
-      <div class="columns">
-        <div class="column">
-          <div class="field">
-            <label class="label" style="font-size:0.8rem;">Unit number</label>
-            <div class="control">
-              <input class="input" type="text" id="tenant-unit" placeholder="A1"/>
-            </div>
-          </div>
+      <!-- Unit + Rent -->
+      <div class="rt-input-group">
+        <div class="rt-field">
+          <label class="rt-label" for="tenant-unit">Unit number</label>
+          <input class="rt-input" type="text" id="tenant-unit" placeholder="e.g. A1" autocomplete="off"/>
         </div>
-        <div class="column">
-          <div class="field">
-            <label class="label" style="font-size:0.8rem;">Monthly rent ($)</label>
-            <div class="control">
-              <input class="input" type="number" id="tenant-rent" placeholder="500.00" step="0.01"/>
-            </div>
+        <div class="rt-field">
+          <label class="rt-label" for="tenant-rent">Monthly rent</label>
+          <div class="rt-input-wrap">
+            <span class="rt-input-prefix">$</span>
+            <input class="rt-input" type="number" id="tenant-rent" placeholder="0.00" step="0.01" min="0"/>
           </div>
         </div>
       </div>
 
-      <div class="columns">
-        <div class="column">
-          <div class="field">
-            <label class="label" style="font-size:0.8rem;">Lease start</label>
-            <div class="control">
-              <input class="input" type="date" id="tenant-lease-start"/>
-            </div>
-          </div>
+      <!-- Lease dates -->
+      <div class="rt-input-group">
+        <div class="rt-field">
+          <label class="rt-label" for="tenant-lease-start">Lease start</label>
+          <input class="rt-input" type="date" id="tenant-lease-start"/>
         </div>
-        <div class="column">
-          <div class="field">
-            <label class="label" style="font-size:0.8rem;">Lease end</label>
-            <div class="control">
-              <input class="input" type="date" id="tenant-lease-end"/>
-            </div>
-          </div>
+        <div class="rt-field">
+          <label class="rt-label" for="tenant-lease-end">Lease end</label>
+          <input class="rt-input" type="date" id="tenant-lease-end"/>
         </div>
       </div>
 
-      <div id="modal-error" style="display:none;color:#b91c1c;font-size:0.8rem;margin-top:0.5rem;"></div>
-    </section>
-    <footer class="modal-card-foot" style="border-top:1px solid #e5e7eb;border-radius:0 0 14px 14px;gap:0.5rem;">
-      <button class="button is-accent" id="modal-save-btn" onclick="saveTenant()">Save</button>
-      <button class="button" onclick="closeModal()">Cancel</button>
-    </footer>
+      <!-- Error -->
+      <div class="rt-field-error" id="modal-error"></div>
+    </div>
+
+    <!-- Footer -->
+    <div class="rt-modal-footer">
+      <button class="rt-btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="rt-btn-save" id="modal-save-btn" onclick="saveTenant()">
+        <div class="rt-spinner"></div>
+        <span class="rt-btn-label">Save tenant</span>
+      </button>
+    </div>
+
   </div>
 </div>
 
@@ -92,26 +281,29 @@
 {% block scripts %}
 <script>
   function openAddModal() {
-    document.getElementById('modal-title').textContent = 'Add tenant';
-    document.getElementById('tenant-id').value = '';
-    document.getElementById('tenant-name').value = '';
-    document.getElementById('tenant-unit').value = '';
-    document.getElementById('tenant-rent').value = '';
-    document.getElementById('tenant-lease-start').value = '';
-    document.getElementById('tenant-lease-end').value = '';
-    document.getElementById('modal-error').style.display = 'none';
+    document.getElementById('modal-title').textContent    = 'Add tenant';
+    document.getElementById('modal-subtitle').textContent = 'Fill in the tenant and lease details below';
+    document.getElementById('tenant-id').value            = '';
+    document.getElementById('tenant-name').value          = '';
+    document.getElementById('tenant-unit').value          = '';
+    document.getElementById('tenant-rent').value          = '';
+    document.getElementById('tenant-lease-start').value   = '';
+    document.getElementById('tenant-lease-end').value     = '';
+    document.getElementById('modal-error').classList.remove('is-visible');
     document.getElementById('tenant-modal').classList.add('is-active');
+    setTimeout(() => document.getElementById('tenant-name').focus(), 100);
   }
 
   function openEditModal(id, name, unit, rent, leaseStart, leaseEnd) {
-    document.getElementById('modal-title').textContent = 'Edit tenant';
-    document.getElementById('tenant-id').value = id;
-    document.getElementById('tenant-name').value = name;
-    document.getElementById('tenant-unit').value = unit;
-    document.getElementById('tenant-rent').value = rent;
-    document.getElementById('tenant-lease-start').value = leaseStart || '';
-    document.getElementById('tenant-lease-end').value = leaseEnd || '';
-    document.getElementById('modal-error').style.display = 'none';
+    document.getElementById('modal-title').textContent    = 'Edit tenant';
+    document.getElementById('modal-subtitle').textContent = 'Update the tenant or lease details';
+    document.getElementById('tenant-id').value            = id;
+    document.getElementById('tenant-name').value          = name;
+    document.getElementById('tenant-unit').value          = unit;
+    document.getElementById('tenant-rent').value          = rent;
+    document.getElementById('tenant-lease-start').value   = leaseStart || '';
+    document.getElementById('tenant-lease-end').value     = leaseEnd   || '';
+    document.getElementById('modal-error').classList.remove('is-visible');
     document.getElementById('tenant-modal').classList.add('is-active');
   }
 
@@ -119,26 +311,38 @@
     document.getElementById('tenant-modal').classList.remove('is-active');
   }
 
+  function handleOverlayClick(e) {
+    if (e.target === document.getElementById('tenant-modal')) closeModal();
+  }
+
+  // Close on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeModal();
+  });
+
   async function saveTenant() {
     const id    = document.getElementById('tenant-id').value;
     const btn   = document.getElementById('modal-save-btn');
     const error = document.getElementById('modal-error');
 
     const payload = {
-      name:        document.getElementById('tenant-name').value.trim(),
-      unit_number: document.getElementById('tenant-unit').value.trim(),
+      name:         document.getElementById('tenant-name').value.trim(),
+      unit_number:  document.getElementById('tenant-unit').value.trim(),
       monthly_rent: parseFloat(document.getElementById('tenant-rent').value),
       lease_start:  document.getElementById('tenant-lease-start').value || null,
-      lease_end:    document.getElementById('tenant-lease-end').value || null,
+      lease_end:    document.getElementById('tenant-lease-end').value   || null,
     };
 
     if (!payload.name || !payload.unit_number || isNaN(payload.monthly_rent)) {
-      error.textContent = 'Name, unit and rent are required.';
-      error.style.display = 'block';
+      error.textContent = 'Full name, unit number and monthly rent are required.';
+      error.classList.add('is-visible');
       return;
     }
 
     btn.classList.add('is-loading');
+    btn.disabled = true;
+    error.classList.remove('is-visible');
+
     const url    = id ? `/api/tenants/${id}` : '/api/tenants';
     const method = id ? 'PUT' : 'POST';
 
@@ -155,13 +359,14 @@
         htmx.trigger('#tenants-table', 'load');
       } else {
         error.textContent = data.error || 'Failed to save tenant.';
-        error.style.display = 'block';
+        error.classList.add('is-visible');
       }
     } catch (e) {
-      error.textContent = 'Something went wrong.';
-      error.style.display = 'block';
+      error.textContent = 'Something went wrong. Please try again.';
+      error.classList.add('is-visible');
     } finally {
       btn.classList.remove('is-loading');
+      btn.disabled = false;
     }
   }
 
